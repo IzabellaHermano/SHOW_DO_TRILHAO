@@ -1,0 +1,167 @@
+/* ========================================================
+   IDENTIDADE VISUAL CPTM & DESIGN SYSTEM - SHOW DO TRILHÃO
+   Manual de Identidade Visual da CPTM:
+   - Vermelho CPTM: #E2001A (RGB 226, 0, 26)
+   - Cinza CPTM: #707173 (RGB 112, 113, 115)
+   - Neutros: Branco (#FFFFFF), Preto (#141517), Carvão (#2B2C2E)
+   - Tipografia: Frutiger, Frutiger LT Std, Arial, Helvetica, sans-serif
+   - Destaque Exclusivo: Ouro/Dourado apenas para prêmio/pódio
+   ======================================================== */
+
+:root {
+  /* Cores Institucionais CPTM */
+  --cptm-red: #E2001A;
+  --cptm-red-hover: #F2132D;
+  --cptm-red-dark: #9B0012;
+  --cptm-red-darker: #6E000C;
+  --cptm-red-glow: rgba(226, 0, 26, 0.4);
+  --cptm-red-glow-strong: rgba(226, 0, 26, 0.65);
+
+  --cptm-gray: #707173;
+  --cptm-gray-hover: #5A5B5D;
+  --cptm-gray-dark: #2B2C2E;
+  --cptm-gray-darker: #1A1B1C;
+  --cptm-gray-border: #424345;
+  --cptm-gray-light: #E4E5E7;
+  --cptm-gray-subtle: #F4F5F6;
+
+  /* Neutros e Superfícies */
+  --color-white: #FFFFFF;
+  --color-black: #121314;
+  --bg-card: #FFFFFF;
+  --bg-card-subtle: #F7F8F9;
+  --bg-card-hover: #FFFFFF;
+
+  /* Textos */
+  --text-primary: #18191B;
+  --text-secondary: #585A5D;
+  --text-muted: #707173;
+  --text-on-stage: #FFFFFF;
+  --text-on-stage-muted: #C8CACD;
+
+  /* Destaque Exclusivo de Moeda / Prêmio / Pódio */
+  --prize-gold: #D49500;
+  --prize-gold-bright: #F5B800;
+  --prize-gold-dark: #996A00;
+  --prize-gold-bg: rgba(212, 149, 0, 0.12);
+  --prize-gold-border: rgba(212, 149, 0, 0.35);
+
+  /* Feedback de Jogo (Acerto e Erro) */
+  --color-correct: #15803D;
+  --color-correct-border: #16A34A;
+  --color-correct-bg: #DCFCE7;
+  --color-wrong: #E2001A;
+  --color-wrong-border: #B91C1C;
+  --color-wrong-bg: #FEE2E2;
+
+  /* Tipografia Obrigatória do Manual CPTM */
+  --font-family: "Frutiger", "Frutiger LT Std", Arial, Helvetica, sans-serif;
+
+  /* Raios de Arredondamento */
+  --radius-xs: 4px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-pill: 9999px;
+
+  /* Sombras 3D e Profundidade do Game Show */
+  --shadow-3d-red: 0 4px 0 var(--cptm-red-dark), 0 8px 18px rgba(226, 0, 26, 0.45);
+  --shadow-3d-red-active: 0 1px 0 var(--cptm-red-dark), 0 3px 8px rgba(226, 0, 26, 0.3);
+  --shadow-3d-gray: 0 4px 0 #525355, 0 8px 16px rgba(0, 0, 0, 0.25);
+  --shadow-3d-white: 0 4px 0 #D5D6D8, 0 8px 18px rgba(0, 0, 0, 0.15);
+  --shadow-stage-card: 0 18px 40px rgba(0, 0, 0, 0.45), 0 4px 10px rgba(0, 0, 0, 0.25);
+  --shadow-stage-glow: 0 0 35px rgba(226, 0, 26, 0.3);
+
+  /* Transições Dinâmicas */
+  --transition-fast: 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Reset Global */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  min-height: 100vh;
+  font-family: var(--font-family);
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+  color: var(--text-on-stage);
+}
+
+/* ========================================================
+   PALCO DE GAME SHOW (FUNDO DA PÁGINA)
+   - Gradiente radial do Vermelho CPTM para Cinza-Carvão #2B2C2E
+   - Feixes de holofote de auditório
+   - Textura geométrica de trilhos ferroviários em baixa opacidade
+   ======================================================== */
+body {
+  background-color: var(--cptm-gray-dark);
+  background-image: 
+    /* Holofotes cônicos de auditório de TV */
+    linear-gradient(115deg, rgba(255, 255, 255, 0.05) 0%, transparent 40%),
+    linear-gradient(245deg, rgba(255, 255, 255, 0.05) 0%, transparent 40%),
+    /* Foco de luz principal do palco em Vermelho CPTM */
+    radial-gradient(ellipse 90% 55% at 50% -5%, rgba(226, 0, 26, 0.42) 0%, rgba(155, 0, 18, 0.25) 35%, transparent 75%),
+    /* Luz de chão do auditório */
+    radial-gradient(circle at 50% 120%, rgba(226, 0, 26, 0.2) 0%, transparent 60%),
+    /* Padrão geométrico ferroviário sutil (trilhos e dormentes) */
+    repeating-linear-gradient(0deg, transparent, transparent 38px, rgba(255, 255, 255, 0.025) 38px, rgba(255, 255, 255, 0.025) 40px),
+    repeating-linear-gradient(90deg, transparent, transparent 118px, rgba(255, 255, 255, 0.035) 118px, rgba(255, 255, 255, 0.035) 120px),
+    /* Base de palco em gradiente cinza-carvão CPTM */
+    linear-gradient(180deg, #222325 0%, #2B2C2E 40%, #1A1B1C 100%);
+  background-attachment: fixed;
+  background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 100% 40px, 120px 100%, 100% 100%;
+}
+
+/* O #root ocupa 100% da tela */
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  position: relative;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: color var(--transition-fast), transform var(--transition-fast);
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: var(--font-family);
+  font-size: inherit;
+}
+
+input, select, textarea {
+  font-family: var(--font-family);
+  font-size: inherit;
+}
+
+/* Foco Acessível (WCAG AA) */
+:focus-visible {
+  outline: 3px solid var(--cptm-red);
+  outline-offset: 3px;
+}
+
+/* Respeito a Prefers Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

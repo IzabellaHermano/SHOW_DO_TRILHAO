@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-ShowDoTrilhaoApplication<show-do-trilhao>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.cptm.showdotrilhao.ShowDoTrilhaoApplication",
+            "projectName": "show-do-trilhao",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}

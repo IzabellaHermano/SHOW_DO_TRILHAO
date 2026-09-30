@@ -1,0 +1,6 @@
+#FileLock
+#Tue Sep 29 14:50:56 BRT 2026
+server=54.232.189.113\:52892
+hostName=ec2-54-232-189-113.sa-east-1.compute.amazonaws.com
+method=file
+id=1a0ee4a7e8210a840e106207b14699cf4279862644a
