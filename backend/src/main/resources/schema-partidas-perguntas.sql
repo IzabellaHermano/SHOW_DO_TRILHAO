@@ -1,11 +1,11 @@
 -- ========================================================
--- SCRIPT DE MIGRAÇÃO: TABELA partidas_perguntas
+-- SCRIPT DE TABELA: partidas_perguntas
 -- Show do Trilhão • CPTM
--- Compatível com MySQL e H2 Database
+-- Compatível com PostgreSQL, MySQL e H2 Database
 -- ========================================================
 
 CREATE TABLE IF NOT EXISTS partidas_perguntas (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id BIGSERIAL PRIMARY KEY,
     partida_id BIGINT NOT NULL,
     pergunta_id BIGINT NOT NULL,
     ordem INT NOT NULL,
@@ -16,6 +16,5 @@ CREATE TABLE IF NOT EXISTS partidas_perguntas (
     CONSTRAINT uk_partida_ordem UNIQUE (partida_id, ordem)
 );
 
--- Índices para otimização de busca rápida durante o jogo
 CREATE INDEX IF NOT EXISTS idx_partida_perguntas_partida ON partidas_perguntas(partida_id);
 CREATE INDEX IF NOT EXISTS idx_partida_perguntas_ordem ON partidas_perguntas(partida_id, ordem);

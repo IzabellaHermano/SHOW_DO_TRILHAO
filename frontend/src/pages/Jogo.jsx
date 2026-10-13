@@ -3,33 +3,17 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { partidaService } from '../services/api'
 import confetti from 'canvas-confetti'
-import { Clock, AlertTriangle, CheckCircle, ArrowLeft, Train, Award, Check, RotateCcw, Trophy } from 'lucide-react'
+import { Clock, AlertTriangle, ArrowRight, RotateCcw, Trophy, LogOut, CheckCircle2 } from 'lucide-react'
 import apresentadorImg from '../assets/apresentador.png'
 import gameLogo from '../assets/logo.png'
-
-// Escada oficial das 10 perguntas até 1 Milhão
-const ESCADA_PREMIOS = [
-  { numero: 10, valor: 'R$ 1.000.000', valorNumerico: 1000000, especial: true },
-  { numero: 9, valor: 'R$ 500.000', valorNumerico: 500000 },
-  { numero: 8, valor: 'R$ 300.000', valorNumerico: 300000 },
-  { numero: 7, valor: 'R$ 200.000', valorNumerico: 200000 },
-  { numero: 6, valor: 'R$ 100.000', valorNumerico: 100000 },
-  { numero: 5, valor: 'R$ 50.000', valorNumerico: 50000 },
-  { numero: 4, valor: 'R$ 25.000', valorNumerico: 25000 },
-  { numero: 3, valor: 'R$ 10.000', valorNumerico: 10000 },
-  { numero: 2, valor: 'R$ 5.000', valorNumerico: 5000 },
-  { numero: 1, valor: 'R$ 1.000', valorNumerico: 1000 },
-]
-
-const LETRAS = ['A', 'B', 'C', 'D']
 
 export default function Jogo() {
   const { id } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, isAuthenticated } = useAuth()
+  const { isAuthenticated } = useAuth()
 
-  // Estados de Partida
+  // Estados da Partida
   const [partidaId, setPartidaId] = useState(id || null)
   const [partidaInfo, setPartidaInfo] = useState(null)
   const [pergunta, setPergunta] = useState(null)
@@ -40,29 +24,33 @@ export default function Jogo() {
   const [selecionada, setSelecionada] = useState(null)
   const [confirmado, setConfirmado] = useState(false)
   const [enviandoResposta, setEnviandoResposta] = useState(false)
-  const [tempoRestante, setTempoRestante] = useState(30)
-  const [respostaFeedback, setRespostaFeedback] = useState(null) // dados do retorno da resposta
+  const [tempoRestante, setTempoRestante] = useState(45)
+  const [respostaFeedback, setRespostaFeedback] = useState(null)
   const [proximaPerguntaPendente, setProximaPerguntaPendente] = useState(null)
+  const [premioAcumulado, setPremioAcumulado] = useState(0)
+
+  // Modal de Abandono
+  const [mostrarModalAbandono, setMostrarModalAbandono] = useState(false)
+  const [abandonando, setAbandonando] = useState(false)
 
   // Estados de Fim de Jogo
   const [fimDeJogo, setFimDeJogo] = useState(null) // 'vitoria' | 'derrota' | null
   const [acertosFinais, setAcertosFinais] = useState(0)
-  const [premioFinal, setPremioFinal] = useState(0)
+  const [motivoDerrota, setMotivoDerrota] = useState('')
 
-  // Ref para controle de confetes contínuos na tela de vitória
+  // Intervalo de Confetes contínuos na tela de vitória
   const confettiIntervalRef = useRef(null)
 
-  // Função auxiliar de confete com cores CPTM
-  const dispararConfetesCPTM = useCallback((particleCount = 100) => {
+  const dispararConfetes = useCallback((count = 100) => {
     confetti({
-      particleCount,
-      spread: 80,
+      particleCount: count,
+      spread: 90,
       origin: { y: 0.6 },
-      colors: ['#E2001A', '#FFFFFF', '#707173', '#F5B800'],
+      colors: ['#F5B800', '#FFFFFF', '#E2001A', '#0047AB', '#00A859'],
     })
   }, [])
 
-  // Inicialização ou carregamento da partida
+  // Inicialização da Partida
   useEffect(() => {
     let montado = true
 
@@ -73,7 +61,6 @@ export default function Jogo() {
       try {
         let currentId = id
 
-        // Se não tiver ID na URL, mas veio pelo state de navegação da Home
         if (!currentId && location.state?.codigoSala) {
           const codigo = location.state.codigoSala
           const nome = location.state.nomeJogador || 'Passageiro'
@@ -98,23 +85,22 @@ export default function Jogo() {
           return
         }
 
-        // Busca o status atual no backend
         const status = await partidaService.buscarStatus(currentId)
         if (!montado) return
 
         setPartidaInfo(status)
+        setPremioAcumulado(status.pontuacaoFinal || 0)
 
         if (status.status === 'VITORIA') {
           setFimDeJogo('vitoria')
           setAcertosFinais(10)
-          setPremioFinal(1000000)
         } else if (status.status === 'ELIMINADO' || status.status === 'ABANDONADA') {
           setFimDeJogo('derrota')
           setAcertosFinais(status.nivelAlcancado || 0)
-          setPremioFinal(status.pontuacaoFinal || 0)
+          setMotivoDerrota(status.status === 'ABANDONADA' ? 'Você abandonou a partida.' : 'Não foi dessa vez, você errou')
         } else if (status.perguntaAtual) {
           setPergunta(status.perguntaAtual)
-          setTempoRestante(30)
+          setTempoRestante(45)
         } else {
           setErroInicial('Não foi possível carregar a pergunta atual desta partida.')
         }
@@ -135,7 +121,7 @@ export default function Jogo() {
     }
   }, [id, isAuthenticated, location.state, navigate])
 
-  // Trata tempo esgotado
+  // Trata tempo esgotado (45s) -> Errou perde tudo
   const handleTempoEsgotado = useCallback(async () => {
     if (confirmado || enviandoResposta || fimDeJogo || !pergunta) return
     setConfirmado(true)
@@ -150,22 +136,24 @@ export default function Jogo() {
 
       setRespostaFeedback(resp)
       setAcertosFinais(resp.nivelAlcancado || 0)
-      setPremioFinal(resp.pontuacaoAtual || 0)
+      setPremioAcumulado(0)
+      setMotivoDerrota('Tempo esgotado! Nos trilhos da CPTM, a pontualidade é regra.')
 
       setTimeout(() => {
         setFimDeJogo('derrota')
-      }, 1800)
+      }, 2000)
     } catch (err) {
       console.error('Erro ao registrar tempo esgotado:', err)
+      setPremioAcumulado(0)
       setFimDeJogo('derrota')
     } finally {
       setEnviandoResposta(false)
     }
   }, [confirmado, enviandoResposta, fimDeJogo, partidaId, pergunta])
 
-  // Timer regressivo
+  // Cronômetro Regressivo de 45 segundos
   useEffect(() => {
-    if (confirmado || fimDeJogo || carregando || tempoRestante <= 0) return
+    if (confirmado || fimDeJogo || carregando || tempoRestante <= 0 || mostrarModalAbandono) return
 
     const timer = setInterval(() => {
       setTempoRestante((prev) => {
@@ -179,14 +167,14 @@ export default function Jogo() {
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [confirmado, fimDeJogo, carregando, tempoRestante, handleTempoEsgotado])
+  }, [confirmado, fimDeJogo, carregando, tempoRestante, mostrarModalAbandono, handleTempoEsgotado])
 
-  // Efeito de confetes contínuos na tela de vitória
+  // Chuva de confetes na tela de vitória
   useEffect(() => {
     if (fimDeJogo === 'vitoria') {
-      dispararConfetesCPTM(150)
+      dispararConfetes(160)
       confettiIntervalRef.current = setInterval(() => {
-        dispararConfetesCPTM(50)
+        dispararConfetes(60)
       }, 2500)
     }
 
@@ -196,10 +184,10 @@ export default function Jogo() {
         confettiIntervalRef.current = null
       }
     }
-  }, [fimDeJogo, dispararConfetesCPTM])
+  }, [fimDeJogo, dispararConfetes])
 
-  // Submissão da Resposta
-  const handleConfirmar = async () => {
+  // Envio de Resposta
+  const handleConfirmarResposta = async () => {
     if (!selecionada || confirmado || enviandoResposta || !pergunta) return
     setConfirmado(true)
     setEnviandoResposta(true)
@@ -214,38 +202,38 @@ export default function Jogo() {
       setRespostaFeedback(resp)
 
       if (resp.acertou) {
-        dispararConfetesCPTM(100)
+        dispararConfetes(90)
+        setPremioAcumulado(resp.pontuacaoAtual || pergunta.valorPremio)
 
         if (resp.statusPartida === 'VITORIA') {
-          // Vitória! 10ª pergunta acertada
           setAcertosFinais(10)
-          setPremioFinal(1000000)
+          setPremioAcumulado(1000000)
           setTimeout(() => {
             setFimDeJogo('vitoria')
-          }, 1500)
+          }, 1600)
         } else {
-          // Continua para próxima
           setProximaPerguntaPendente(resp.proximaPergunta)
         }
       } else {
-        // Errou: encerra a partida na hora
+        // Errou = perde tudo (R$ 0)
         setAcertosFinais(resp.nivelAlcancado || 0)
-        setPremioFinal(resp.pontuacaoAtual || 0)
+        setPremioAcumulado(0)
+        setMotivoDerrota('Não foi dessa vez, você errou')
         setTimeout(() => {
           setFimDeJogo('derrota')
         }, 2200)
       }
     } catch (err) {
       console.error('Erro ao responder pergunta:', err)
-      const msg = err.response?.data?.mensagem || 'Erro ao processar resposta.'
+      const msg = err.response?.data?.mensagem || 'Erro ao processar resposta no servidor.'
       alert(msg)
       setConfirmado(false)
     } finally {
       setEnviandoResposta(false)
     }
-  };
+  }
 
-  // Avançar para a próxima pergunta recebida do backend
+  // Avançar para próxima pergunta
   const handleAvancarProxima = () => {
     if (!proximaPerguntaPendente) return
     setPergunta(proximaPerguntaPendente)
@@ -253,8 +241,25 @@ export default function Jogo() {
     setSelecionada(null)
     setConfirmado(false)
     setRespostaFeedback(null)
-    setTempoRestante(30)
-  };
+    setTempoRestante(45)
+  }
+
+  // Ação de Abandonar Partida (perde o prêmio acumulado = R$ 0)
+  const handleConfirmarAbandono = async () => {
+    setAbandonando(true)
+    try {
+      await partidaService.abandonar(partidaId)
+      setMostrarModalAbandono(false)
+      setPremioAcumulado(0)
+      setMotivoDerrota('Você abandonou a partida e perdeu todo o prêmio acumulado.')
+      setFimDeJogo('derrota')
+    } catch (err) {
+      console.error('Erro ao abandonar partida:', err)
+      alert('Não foi possível abandonar a partida.')
+    } finally {
+      setAbandonando(false)
+    }
+  }
 
   const formatarMoeda = (valor) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -265,64 +270,64 @@ export default function Jogo() {
   }
 
   // ========================================================
-  // RENDER: TELA DE VITÓRIA (ACERTOU AS 10 PERGUNTAS)
+  // TELA DE VITÓRIA (ACERTOU AS 10 PERGUNTAS)
   // ========================================================
   if (fimDeJogo === 'vitoria') {
     return (
-      <div className="victory-screen-wrapper">
-        {/* Balões Dourados Flutuantes (CSS Puro, pointer-events: none) */}
-        <div className="balloons-container" aria-hidden="true">
-          <div className="balloon balloon-1" style={{ left: '8%', animationDelay: '0s', animationDuration: '6.5s' }} />
-          <div className="balloon balloon-2" style={{ left: '20%', animationDelay: '1.8s', animationDuration: '5.8s' }} />
-          <div className="balloon balloon-3" style={{ left: '35%', animationDelay: '0.7s', animationDuration: '7.2s' }} />
-          <div className="balloon balloon-4" style={{ left: '52%', animationDelay: '2.4s', animationDuration: '6.1s' }} />
-          <div className="balloon balloon-5" style={{ left: '68%', animationDelay: '1.1s', animationDuration: '6.9s' }} />
-          <div className="balloon balloon-6" style={{ left: '82%', animationDelay: '2.8s', animationDuration: '5.5s' }} />
-          <div className="balloon balloon-7" style={{ left: '92%', animationDelay: '0.4s', animationDuration: '7.5s' }} />
+      <div className="victory-fullscreen-wrapper">
+        {/* Balões Dourados Subindo Pela Tela */}
+        <div className="balloons-floating-area" aria-hidden="true">
+          <div className="balloon-gold b1" />
+          <div className="balloon-gold b2" />
+          <div className="balloon-gold b3" />
+          <div className="balloon-gold b4" />
+          <div className="balloon-gold b5" />
+          <div className="balloon-gold b6" />
+          <div className="balloon-gold b7" />
         </div>
 
-        <div className="card victory-card">
-          {/* Logo do Jogo Grande Centralizado */}
-          <div className="victory-logo-wrap">
-            <img src={gameLogo} alt="Show do Trilhão" className="victory-logo-large" />
+        <div className="victory-container-content">
+          {/* Logo Grande do Show */}
+          <div className="victory-logo-box">
+            <img src={gameLogo} alt="Show do Trilhão" className="victory-logo-img" />
           </div>
 
-          {/* Apresentador do Show do Trilhão */}
-          <div className="victory-presenter-wrap">
-            <img src={apresentadorImg} alt="Apresentador Show do Trilhão" className="victory-presenter-image" />
+          {/* Foto do Apresentador Oficial */}
+          <div className="victory-host-box">
+            <img src={apresentadorImg} alt="Silvio dos Trilhos" className="victory-host-photo" />
           </div>
 
-          {/* Mensagem Obrigatória de Vitória */}
-          <h1 className="victory-headline">
+          {/* Mensagem Obrigatória do Show */}
+          <h1 className="victory-message-text">
             Vocês ganharam 1 Milhão de oportunidades para conhecer e explorar a ferrovia
           </h1>
 
-          {/* Número 1.000.000 Dourado Pulsante */}
-          <div className="victory-prize-number" aria-label="1 milhão">
+          {/* 1000000 Grande, Dourado e Pulsando */}
+          <div className="victory-gold-number pulse-gold" aria-label="1000000">
             1.000.000
           </div>
 
-          <p className="victory-subtext">
-            Parabéns! Você completou as 10 estações do conhecimento ferroviário e se consagrou campeão absoluto dos trilhos da CPTM!
+          <p className="victory-award-sub">
+            Parabéns, novo milionário dos trilhos paulistas! Você dominou todas as 10 estações da CPTM com maestria absoluta!
           </p>
 
-          <div className="victory-actions">
+          <div className="victory-buttons-row">
             <button
               type="button"
               onClick={() => navigate('/')}
-              className="btn btn-primary btn-lg btn-pulse"
+              className="btn btn-positive-action btn-lg"
             >
               <RotateCcw size={20} />
-              <span>Jogar de novo</span>
+              <span>Jogar Novamente</span>
             </button>
 
             <button
               type="button"
               onClick={() => navigate('/ranking')}
-              className="btn btn-secondary btn-lg"
+              className="btn btn-show-light btn-lg"
             >
               <Trophy size={20} />
-              <span>Ver ranking</span>
+              <span>Ver Ranking Oficial</span>
             </button>
           </div>
         </div>
@@ -331,99 +336,62 @@ export default function Jogo() {
   }
 
   // ========================================================
-  // RENDER: TELA DE DERROTA (ERROU QUALQUER PERGUNTA)
+  // TELA DE ERRO / DERROTA (ERROU OU ABANDONOU = PERDE TUDO)
   // ========================================================
   if (fimDeJogo === 'derrota') {
     return (
-      <div className="defeat-screen-wrapper">
-        <div className="card defeat-card">
-          <div className="defeat-icon-wrap">
-            <AlertTriangle size={64} className="defeat-icon" />
+      <div className="defeat-fullscreen-wrapper">
+        <div className="defeat-card-box">
+          <div className="defeat-icon-circle">
+            <AlertTriangle size={56} className="defeat-alert-icon" />
           </div>
 
-          {/* Mensagem Obrigatória de Derrota */}
-          <h1 className="defeat-title">
-            Não foi dessa vez, você errou
+          <h1 className="defeat-heading">
+            {motivoDerrota || 'Não foi dessa vez, você errou'}
           </h1>
 
-          <div className="defeat-stats-box">
-            <div className="defeat-stat-item">
-              <span className="stat-label">Perguntas Acertadas:</span>
-              <span className="stat-value">{acertosFinais} de 10</span>
+          <div className="defeat-summary-box">
+            <div className="summary-field">
+              <span className="summary-label">Perguntas Acertadas:</span>
+              <span className="summary-value">{acertosFinais} de 10</span>
             </div>
-            <div className="defeat-stat-divider" />
-            <div className="defeat-stat-item">
-              <span className="stat-label">Prêmio Acumulado:</span>
-              <span className="stat-value gold-text">{formatarMoeda(premioFinal)}</span>
+            <div className="summary-field">
+              <span className="summary-label">Prêmio Final Conquistado:</span>
+              <span className="summary-value zero-prize">R$ 0</span>
             </div>
           </div>
 
           {respostaFeedback && respostaFeedback.textoCorreta && (
-            <div className="defeat-answer-recap">
-              <p>A resposta correta era a alternativa <strong>{respostaFeedback.corretaNumero}</strong>: <em>"{respostaFeedback.textoCorreta}"</em></p>
+            <div className="defeat-explanation-card">
+              <p className="defeat-gabarito">
+                Gabarito oficial: alternativa <strong>{respostaFeedback.corretaNumero}</strong>: "{respostaFeedback.textoCorreta}"
+              </p>
               {respostaFeedback.explicacao && (
-                <small className="defeat-explanation">{respostaFeedback.explicacao}</small>
+                <p className="defeat-exp-text">{respostaFeedback.explicacao}</p>
               )}
             </div>
           )}
 
-          <p className="defeat-subtext">
-            Nos trilhos da CPTM, cada viagem é um novo aprendizado. Retorne à plataforma e tente novamente alcançar o 1 Milhão!
+          <p className="defeat-encouragement">
+            Nos trilhos da vida e da ferrovia, cada parada é uma chance de aprender. Volte à plataforma e tente de novo!
           </p>
 
-          <div className="defeat-actions">
+          <div className="defeat-actions-row">
             <button
               type="button"
               onClick={() => navigate('/')}
-              className="btn btn-primary btn-lg"
+              className="btn btn-positive-action btn-lg"
             >
               <RotateCcw size={20} />
-              <span>Jogar de novo</span>
+              <span>Tentar Novamente</span>
             </button>
 
             <button
               type="button"
               onClick={() => navigate('/ranking')}
-              className="btn btn-secondary btn-lg"
+              className="btn btn-secondary-show btn-lg"
             >
               <Trophy size={20} />
-              <span>Ver ranking</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // ========================================================
-  // RENDER: CARREGAMENTO OU ERRO INICIAL
-  // ========================================================
-  if (carregando) {
-    return (
-      <div className="game-loading-container">
-        <div className="card" style={{ textAlign: 'center', padding: '3.5rem 2rem' }}>
-          <Train size={48} className="pulse" style={{ color: 'var(--cptm-red)', margin: '0 auto 1.5rem auto' }} />
-          <h2 style={{ textTransform: 'uppercase', fontWeight: 900, marginBottom: '0.5rem' }}>Embarcando na Partida...</h2>
-          <p style={{ color: 'var(--text-secondary)' }}>Conectando aos trilhos da CPTM e preparando suas 10 perguntas.</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (erroInicial) {
-    return (
-      <div className="game-error-container">
-        <div className="card" style={{ textAlign: 'center', padding: '3rem 2rem', maxWidth: '560px', margin: '0 auto' }}>
-          <AlertTriangle size={48} style={{ color: 'var(--cptm-red)', margin: '0 auto 1rem auto' }} />
-          <h2 style={{ textTransform: 'uppercase', fontWeight: 900, marginBottom: '1rem' }}>Aviso da Estação</h2>
-          <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem', lineHeight: 1.6 }}>{erroInicial}</p>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-            <button type="button" onClick={() => navigate('/')} className="btn btn-primary btn-md">
-              <ArrowLeft size={18} />
-              <span>Voltar para o Início</span>
-            </button>
-            <button type="button" onClick={() => navigate('/ranking')} className="btn btn-secondary btn-md">
-              <Trophy size={18} />
               <span>Ver Ranking</span>
             </button>
           </div>
@@ -432,183 +400,225 @@ export default function Jogo() {
     )
   }
 
-  if (!pergunta) {
-    return null
+  // Carregamento Inicial
+  if (carregando) {
+    return (
+      <div className="game-loading-stage">
+        <div className="game-loading-card">
+          <div className="loading-spinner-cptm" />
+          <h2>Aguarde, estamos preparando seu trem...</h2>
+          <p>Sorteando perguntas oficiais e calibrando o cronômetro da rodada.</p>
+        </div>
+      </div>
+    )
   }
 
-  const numeroAtual = pergunta.numeroPerguntaAtual || (partidaInfo?.perguntaAtualIndex != null ? partidaInfo.perguntaAtualIndex + 1 : 1)
+  // Erro Inicial
+  if (erroInicial) {
+    return (
+      <div className="game-loading-stage">
+        <div className="game-loading-card">
+          <AlertTriangle size={48} style={{ color: '#E2001A', margin: '0 auto 1rem auto' }} />
+          <h2>Aviso dos Trilhos</h2>
+          <p>{erroInicial}</p>
+          <button type="button" onClick={() => navigate('/')} className="btn btn-positive-action btn-md" style={{ marginTop: '1.5rem' }}>
+            <span>Voltar ao Menu Principal</span>
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (!pergunta) return null
+
+  const nivelAtual = pergunta.nivelDificuldade || (partidaInfo?.perguntaAtualIndex != null ? partidaInfo.perguntaAtualIndex + 1 : 1)
 
   // ========================================================
-  // RENDER: TELA DE GAMEPLAY (QUIZ EM ANDAMENTO)
+  // TELA DE GAMEPLAY (QUIZ SHOW EM ANDAMENTO)
   // ========================================================
   return (
-    <div className="game-screen">
-      {/* Placar Eletrônico / HUD Superior */}
-      <div className="game-status-bar card">
-        <div className="game-info-col">
-          <span className="badge badge-cptm">
-            Pergunta {numeroAtual} de 10
-          </span>
-          <span className="game-diff">Nível: {pergunta.nivelDificuldade}</span>
-          <span className="room-sub">
-            {partidaInfo?.salaNome || 'Linhas da CPTM'} • {partidaInfo?.jogadorNome || user?.nome || 'Passageiro'}
-          </span>
+    <div className="gameplay-stage-wrapper">
+      {/* BARRA SUPERIOR (HUD DO SHOW) */}
+      <header className="gameplay-top-bar" role="banner">
+        <div className="top-bar-left">
+          <span className="game-show-title">SHOW DO TRILHÃO</span>
+          <span className="game-level-tag">Nível {nivelAtual} de 10</span>
         </div>
 
-        <div className="game-timer-col" aria-label="Cronômetro">
-          <Clock size={24} className={tempoRestante <= 10 ? 'timer-danger' : ''} />
-          <span className={`timer-count ${tempoRestante <= 10 ? 'pulse' : ''}`}>
-            {tempoRestante.toString().padStart(2, '0')}s
-          </span>
+        {/* Cronômetro Regressivo de 45 segundos */}
+        <div className={`top-bar-center timer-pill ${tempoRestante <= 10 ? 'timer-urgent' : ''}`} aria-label={`Cronômetro: ${tempoRestante} segundos`}>
+          <Clock size={22} className="timer-icon" />
+          <span className="timer-seconds">{tempoRestante.toString().padStart(2, '0')}s</span>
         </div>
 
-        <div className="game-prize-col">
-          <span className="prize-label">Prêmio Desta Pergunta:</span>
-          <span className="prize-value">
-            {formatarMoeda(pergunta.valorPremio)}
-          </span>
+        <div className="top-bar-right">
+          <div className="accumulated-box">
+            <span className="accumulated-label">Prêmio Acumulado:</span>
+            <span className="accumulated-value">{formatarMoeda(premioAcumulado)}</span>
+          </div>
+          <div className="current-prize-box">
+            <span className="current-prize-label">Vale nesta pergunta:</span>
+            <span className="current-prize-value">{formatarMoeda(pergunta.valorPremio)}</span>
+          </div>
         </div>
-      </div>
+      </header>
 
-      {/* Grid Principal de Jogo com Escada de Prêmios */}
-      <div className="game-layout-grid">
-        {/* Painel Central da Pergunta e Alternativas */}
-        <div className="game-main-area">
-          <div className="card question-card">
-            {/* Bloco do Apresentador e Enunciado */}
-            <div className="presenter-bubble">
-              <img
-                src={apresentadorImg}
-                alt="Apresentador"
-                className="presenter-mini"
-              />
-              <div className="speech-text">
-                <span className="category-tag">Pergunta {numeroAtual} de 10</span>
-                <h2 className="question-statement">{pergunta.enunciado}</h2>
-              </div>
+      {/* ÁREA CENTRAL DO QUIZ */}
+      <main className="gameplay-main-stage">
+        {/* CARD DO ENUNCIADO EM VERMELHO ESCURO DEGRADÊ COM BORDA BRANCA */}
+        <section className="statement-box-tv" aria-labelledby="pergunta-enunciado">
+          <div className="statement-header-row">
+            <div className="statement-host-badge">
+              <img src={apresentadorImg} alt="Silvio dos Trilhos" className="statement-host-img" />
+              <span className="statement-host-caption">Silvio dos Trilhos pergunta:</span>
             </div>
+            <span className="statement-stage-counter">Pergunta #{nivelAtual}</span>
+          </div>
+          <h2 id="pergunta-enunciado" className="statement-text-tv">
+            {pergunta.enunciado}
+          </h2>
+        </section>
 
-            {/* 4 Alternativas em formato Pílula / Game Show */}
-            <div className="options-grid" role="group" aria-label="Alternativas da Pergunta">
-              {pergunta.alternativas?.map((alt, idx) => {
-                let btnClass = 'option-btn'
-                if (selecionada === alt.id) btnClass += ' selected'
+        {/* 4 ALTERNATIVAS EM LISTA VERTICAL COM CÍRCULO BRANCO E NÚMERO EM AZUL */}
+        <div className="options-vertical-list" role="radiogroup" aria-label="Alternativas">
+          {pergunta.alternativas?.map((alt) => {
+            let itemClass = 'option-row-item'
+            if (selecionada === alt.id) itemClass += ' selected'
 
-                if (confirmado && respostaFeedback) {
-                  const isCorreta = respostaFeedback.corretaNumero === alt.numero
-                  if (isCorreta) {
-                    btnClass += ' correct'
-                  } else if (selecionada === alt.id && !respostaFeedback.acertou) {
-                    btnClass += ' wrong'
-                  }
-                }
+            if (confirmado && respostaFeedback) {
+              const ehCorreta = respostaFeedback.corretaNumero === alt.numero
+              if (ehCorreta) {
+                itemClass += ' correct'
+              } else if (selecionada === alt.id && !respostaFeedback.acertou) {
+                itemClass += ' wrong'
+              }
+            }
 
-                return (
-                  <button
-                    key={alt.id}
-                    type="button"
-                    disabled={confirmado || enviandoResposta}
-                    onClick={() => setSelecionada(alt.id)}
-                    className={btnClass}
-                  >
-                    <span className="option-letter">{alt.numero ? LETRAS[alt.numero - 1] : LETRAS[idx]}</span>
-                    <span className="option-text">{alt.texto}</span>
-                  </button>
-                )
-              })}
-            </div>
+            return (
+              <button
+                key={alt.id}
+                type="button"
+                role="radio"
+                aria-checked={selecionada === alt.id}
+                disabled={confirmado || enviandoResposta}
+                onClick={() => setSelecionada(alt.id)}
+                className={itemClass}
+              >
+                {/* Círculo branco numerado com o número em azul */}
+                <span className="option-circle-blue-num" aria-hidden="true">
+                  {alt.numero}
+                </span>
 
-            {/* Feedback Visual Imediato */}
-            {confirmado && respostaFeedback && (
-              <div className={`answer-feedback ${respostaFeedback.acertou ? 'acertou' : 'errou'}`} role="alert">
-                {respostaFeedback.acertou ? (
-                  <>
-                    <CheckCircle size={32} />
-                    <div>
-                      <h4>Certa Resposta!</h4>
-                      <p>{respostaFeedback.mensagem || 'Você garantiu mais uma etapa rumo ao 1 Milhão!'}</p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <AlertTriangle size={32} />
-                    <div>
-                      <h4>Resposta Incorreta!</h4>
-                      <p>Encerrando a partida...</p>
-                    </div>
-                  </>
-                )}
-              </div>
+                {/* Texto da alternativa */}
+                <span className="option-row-text">
+                  {alt.texto}
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* FEEDBACK VISUAL APÓS CONFIRMAR */}
+        {confirmado && respostaFeedback && (
+          <div className={`answer-banner-tv ${respostaFeedback.acertou ? 'banner-correct' : 'banner-wrong'}`} role="status">
+            {respostaFeedback.acertou ? (
+              <>
+                <CheckCircle2 size={28} />
+                <div>
+                  <strong>Certa Resposta!</strong> {respostaFeedback.mensagem || 'Você garantiu o prêmio e avança para a próxima estação!'}
+                </div>
+              </>
+            ) : (
+              <>
+                <AlertTriangle size={28} />
+                <div>
+                  <strong>Não foi dessa vez, você errou!</strong> Encerrando a partida...
+                </div>
+              </>
             )}
+          </div>
+        )}
 
-            {/* Controles de Ação da Partida */}
-            <div className="game-actions">
+        {/* CONTROLES DE AÇÃO E BOTÃO DISCRETO DE ABANDONAR PARTIDA */}
+        <div className="gameplay-footer-actions">
+          {/* Botões de Ação Positiva em Verde */}
+          <div className="footer-actions-left">
+            {!confirmado ? (
               <button
                 type="button"
-                onClick={() => navigate('/')}
+                id="btn-confirmar-resposta"
+                disabled={!selecionada || enviandoResposta}
+                onClick={handleConfirmarResposta}
+                className="btn btn-positive-action btn-xl btn-pulse"
+              >
+                <span>{enviandoResposta ? 'Avaliando Resposta...' : 'Confirmar Resposta'}</span>
+                <ArrowRight size={20} />
+              </button>
+            ) : proximaPerguntaPendente ? (
+              <button
+                type="button"
+                id="btn-proxima-pergunta"
+                onClick={handleAvancarProxima}
+                className="btn btn-positive-action btn-xl btn-pulse"
+              >
+                <span>Próxima Pergunta</span>
+                <ArrowRight size={20} />
+              </button>
+            ) : null}
+          </div>
+
+          {/* Botão Discreto no Canto Inferior Direito: Abandonar Partida */}
+          <div className="footer-actions-right">
+            <button
+              type="button"
+              id="btn-abandonar-partida"
+              onClick={() => setMostrarModalAbandono(true)}
+              className="btn-abandon-subtle"
+              title="Abandonar partida (penalidade: perde tudo)"
+            >
+              <LogOut size={16} />
+              <span>Abandonar partida</span>
+            </button>
+          </div>
+        </div>
+      </main>
+
+      {/* MODAL DE CONFIRMAÇÃO DE ABANDONO */}
+      {mostrarModalAbandono && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true">
+          <div className="modal-dialog card abandon-modal-dialog">
+            <div className="modal-header">
+              <div className="modal-title-wrap">
+                <AlertTriangle size={24} style={{ color: '#E2001A' }} />
+                <h3>Abandonar Partida?</h3>
+              </div>
+            </div>
+
+            <p className="modal-desc" style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
+              Atenção! Conforme as regras oficiais do Show do Trilhão, ao abandonar a partida você <strong>perde todo o prêmio acumulado</strong> ({formatarMoeda(premioAcumulado)}) e encerra com <strong>R$ 0</strong>.
+            </p>
+
+            <div className="modal-footer-actions">
+              <button
+                type="button"
+                onClick={() => setMostrarModalAbandono(false)}
                 className="btn btn-secondary btn-md"
               >
-                <ArrowLeft size={16} />
-                <span>Desembarcar</span>
+                Continuar Jogando
               </button>
 
-              {!confirmado ? (
-                <button
-                  type="button"
-                  disabled={!selecionada || enviandoResposta}
-                  onClick={handleConfirmar}
-                  className="btn btn-primary btn-lg btn-pulse"
-                >
-                  <span>{enviandoResposta ? 'Validando...' : 'Confirmar Resposta'}</span>
-                </button>
-              ) : proximaPerguntaPendente ? (
-                <button
-                  type="button"
-                  onClick={handleAvancarProxima}
-                  className="btn btn-primary btn-lg btn-pulse"
-                >
-                  <span>Próxima Estação</span>
-                </button>
-              ) : null}
+              <button
+                type="button"
+                disabled={abandonando}
+                onClick={handleConfirmarAbandono}
+                className="btn btn-danger-action btn-md"
+              >
+                <span>{abandonando ? 'Abandonando...' : 'Confirmar e Perder Tudo'}</span>
+              </button>
             </div>
           </div>
         </div>
-
-        {/* Escada de Prêmios (Painel Lateral de Progresso) */}
-        <aside className="card prize-ladder-card" aria-label="Escada de Prêmios">
-          <div className="prize-ladder-title">
-            <Award size={18} />
-            <span>Escada do Trilhão</span>
-          </div>
-
-          <div className="ladder-list">
-            {ESCADA_PREMIOS.map((degrau) => {
-              const isAtual = degrau.numero === numeroAtual
-              const isVencido = degrau.numero < numeroAtual
-              let stepClass = 'ladder-step'
-              if (isAtual) stepClass += ' current'
-              if (isVencido) stepClass += ' cleared'
-              if (degrau.especial) stepClass += ' trilhao-step'
-
-              return (
-                <div key={degrau.numero} className={stepClass}>
-                  <div className="step-label">
-                    {isAtual ? (
-                      <Train size={14} className="pulse" />
-                    ) : isVencido ? (
-                      <Check size={14} />
-                    ) : (
-                      <span>{degrau.numero}</span>
-                    )}
-                    <span>Estação {degrau.numero}</span>
-                  </div>
-                  <span className="step-value">{degrau.valor}</span>
-                </div>
-              )
-            })}
-          </div>
-        </aside>
-      </div>
+      )}
     </div>
   )
 }

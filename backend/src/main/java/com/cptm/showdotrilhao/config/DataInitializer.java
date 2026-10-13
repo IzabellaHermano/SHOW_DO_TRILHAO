@@ -8,42 +8,100 @@ import com.cptm.showdotrilhao.model.enums.Role;
 import com.cptm.showdotrilhao.repository.PerguntaRepository;
 import com.cptm.showdotrilhao.repository.SalaRepository;
 import com.cptm.showdotrilhao.repository.UsuarioRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.security.SecureRandom;
 import java.util.List;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
 
+    private static final Logger log = LoggerFactory.getLogger(DataInitializer.class);
+
     private final UsuarioRepository usuarioRepository;
     private final SalaRepository salaRepository;
     private final PerguntaRepository perguntaRepository;
     private final PasswordEncoder passwordEncoder;
+    private final String adminEmail;
+    private final String adminPassword;
+    private final String apresentadorEmail;
+    private final String apresentadorPassword;
 
     public DataInitializer(UsuarioRepository usuarioRepository,
                            SalaRepository salaRepository,
                            PerguntaRepository perguntaRepository,
-                           PasswordEncoder passwordEncoder) {
+                           PasswordEncoder passwordEncoder,
+                           @Value("${admin.email:admin@cptm.sp.gov.br}") String adminEmail,
+                           @Value("${admin.password:}") String adminPassword,
+                           @Value("${apresentador.email:apresentador@cptm.sp.gov.br}") String apresentadorEmail,
+                           @Value("${apresentador.password:}") String apresentadorPassword) {
         this.usuarioRepository = usuarioRepository;
         this.salaRepository = salaRepository;
         this.perguntaRepository = perguntaRepository;
         this.passwordEncoder = passwordEncoder;
+        this.adminEmail = adminEmail;
+        this.adminPassword = adminPassword;
+        this.apresentadorEmail = apresentadorEmail;
+        this.apresentadorPassword = apresentadorPassword;
+    }
+
+    private String gerarSenhaForte() {
+        final String caracteres = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*";
+        SecureRandom random = new SecureRandom();
+        StringBuilder sb = new StringBuilder(16);
+        for (int i = 0; i < 16; i++) {
+            sb.append(caracteres.charAt(random.nextInt(caracteres.length())));
+        }
+        return sb.toString();
     }
 
     @Override
     public void run(String... args) {
-        // 1. Seed do Usuário ADMIN (acesso exclusivo por seed inicial)
-        Usuario admin = usuarioRepository.findByEmail("admin@cptm.sp.gov.br").orElseGet(() -> {
-            Usuario u = new Usuario("Administrador CPTM", "admin@cptm.sp.gov.br", passwordEncoder.encode("Admin@CPTM2026"), Role.ROLE_ADMIN);
-            return usuarioRepository.save(u);
+        // 1. Seed do Usuário ADMIN (acesso exclusivo por seed inicial e variáveis de ambiente)
+        Usuario admin = usuarioRepository.findByEmail(adminEmail).orElseGet(() -> {
+            String senhaEfetiva = adminPassword;
+            boolean gerada = false;
+            if (senhaEfetiva == null || senhaEfetiva.isBlank()) {
+                senhaEfetiva = gerarSenhaForte();
+                gerada = true;
+            }
+            Usuario u = new Usuario("Administrador CPTM", adminEmail, passwordEncoder.encode(senhaEfetiva), Role.ROLE_ADMIN);
+            Usuario salvo = usuarioRepository.save(u);
+
+            if (gerada) {
+                log.warn("================================================================================");
+                log.warn("[SEGURANÇA] Usuário Administrador criado no banco.");
+                log.warn("[SEGURANÇA] E-mail: {}", adminEmail);
+                log.warn("[SEGURANÇA] Senha gerada (defina ADMIN_PASSWORD no ambiente para fixar): {}", senhaEfetiva);
+                log.warn("================================================================================");
+            }
+            return salvo;
         });
 
         // 2. Seed do Usuário APRESENTADOR oficial
-        Usuario apresentador = usuarioRepository.findByEmail("apresentador@cptm.sp.gov.br").orElseGet(() -> {
-            Usuario u = new Usuario("Silvio dos Trilhos", "apresentador@cptm.sp.gov.br", passwordEncoder.encode("Mestre@CPTM2026"), Role.ROLE_APRESENTADOR);
-            return usuarioRepository.save(u);
+        Usuario apresentador = usuarioRepository.findByEmail(apresentadorEmail).orElseGet(() -> {
+            String senhaEfetiva = apresentadorPassword;
+            boolean gerada = false;
+            if (senhaEfetiva == null || senhaEfetiva.isBlank()) {
+                senhaEfetiva = gerarSenhaForte();
+                gerada = true;
+            }
+            Usuario u = new Usuario("Silvio dos Trilhos", apresentadorEmail, passwordEncoder.encode(senhaEfetiva), Role.ROLE_APRESENTADOR);
+            Usuario salvo = usuarioRepository.save(u);
+
+            if (gerada) {
+                log.warn("================================================================================");
+                log.warn("[SEGURANÇA] Usuário Apresentador oficial criado no banco.");
+                log.warn("[SEGURANÇA] E-mail: {}", apresentadorEmail);
+                log.warn("[SEGURANÇA] Senha gerada (defina APRESENTADOR_PASSWORD no ambiente para fixar): {}", senhaEfetiva);
+                log.warn("================================================================================");
+            }
+            return salvo;
         });
 
         // 3. Seed de Sala Inicial
@@ -118,7 +176,7 @@ public class DataInitializer implements CommandLineRunner {
         // Nível 5 - R$ 50.000
         criarPergunta(
                 "Quantos passageiros por ano a CPTM transporta?",
-                5, 5000L,
+                5, 50000L,
                 "Anualmente, a rede de trens da CPTM atende a uma demanda média de cerca de 480 milhões de embarques.",
                 List.of(
                         new Alternativa(1, "1 bilhão", false),

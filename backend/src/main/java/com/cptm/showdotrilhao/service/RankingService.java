@@ -8,11 +8,13 @@ import com.cptm.showdotrilhao.model.enums.StatusPartida;
 import com.cptm.showdotrilhao.repository.PartidaRepository;
 import com.cptm.showdotrilhao.repository.SalaRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@Transactional(readOnly = true)
 public class RankingService {
 
     private final PartidaRepository partidaRepository;

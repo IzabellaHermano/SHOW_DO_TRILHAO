@@ -10,7 +10,7 @@ export default function Login() {
   const location = useLocation()
   const { login } = useAuth()
 
-  const [isRegister, setIsRegister] = useState(false)
+  const [isRegister, setIsRegister] = useState(Boolean(location.state?.register))
   const [nome, setNome] = useState('')
   const [email, setEmail] = useState('')
   const [senha, setSenha] = useState('')
@@ -62,15 +62,20 @@ export default function Login() {
     }
   }
 
-  // Atalho de demonstração
-  const handleEntrarComoDemo = (demoRole = 'ROLE_JOGADOR') => {
-    login('token_demo_jwt_123', {
-      id: 999,
-      nome: demoRole === 'ROLE_APRESENTADOR' ? 'Apresentador Oficial' : 'Passageiro Convidado',
-      email: demoRole === 'ROLE_APRESENTADOR' ? 'apresentador@cptm.sp.gov.br' : 'jogador@teste.com',
-      role: demoRole,
-    })
-    navigate(from, { replace: true })
+  // Atalho para preencher credenciais oficiais de demonstração
+  const handleEntrarComoDemo = (demoRole = 'ROLE_APRESENTADOR') => {
+    setIsRegister(false)
+    setErro('')
+    if (demoRole === 'ROLE_APRESENTADOR') {
+      setEmail('apresentador@cptm.sp.gov.br')
+      setSenha('Mestre@CPTM2026')
+    } else if (demoRole === 'ROLE_ADMIN') {
+      setEmail('admin@cptm.sp.gov.br')
+      setSenha('Admin@CPTM2026')
+    } else {
+      setEmail('apresentador@cptm.sp.gov.br')
+      setSenha('Mestre@CPTM2026')
+    }
   }
 
   return (

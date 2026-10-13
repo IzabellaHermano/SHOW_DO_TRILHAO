@@ -85,6 +85,7 @@ public class PartidaService {
         return toStatusDto(partida, perguntaDto);
     }
 
+    @Transactional(readOnly = true)
     public PartidaStatusResponse buscarStatus(Long partidaId) {
         Partida partida = buscarPorId(partidaId);
         PerguntaResponse perguntaDto = null;
@@ -131,16 +132,15 @@ public class PartidaService {
                 .findFirst()
                 .orElseThrow(() -> new RegraNegocioException("Gabarito da pergunta não encontrado."));
 
-        // CASO A: Tempo esgotado ou nenhuma alternativa selecionada
+        // CASO A: Tempo esgotado ou nenhuma alternativa selecionada (Regra: perde tudo)
         if (request.tempoEsgotado() || request.alternativaId() == null) {
             respostaPartidaRepository.save(new RespostaPartida(partida, pergunta, null, false, true));
             
             partida.setStatus(StatusPartida.ELIMINADO);
             partida.setFinalizadaEm(LocalDateTime.now());
             int acertos = indexAtual; // Quantas perguntas foram acertadas antes desta
-            long premioAcumulado = obterPremioAcumuladoAte(partida, acertos);
             partida.setNivelAlcancado(acertos);
-            partida.setPontuacaoFinal(premioAcumulado);
+            partida.setPontuacaoFinal(0L); // Regra: errar/tempo esgotado perde tudo
             partidaRepository.save(partida);
 
             return new ResultadoRespostaResponse(
@@ -150,7 +150,7 @@ public class PartidaService {
                     pergunta.getExplicacao(),
                     StatusPartida.ELIMINADO,
                     acertos,
-                    premioAcumulado,
+                    0L,
                     null,
                     "Não foi dessa vez, você errou"
             );
@@ -165,14 +165,13 @@ public class PartidaService {
         boolean acertou = altEscolhida.isCorreta();
         respostaPartidaRepository.save(new RespostaPartida(partida, pergunta, altEscolhida, acertou, false));
 
-        // CASO C: Resposta INCORRETA (Fim de jogo imediato por derrota)
+        // CASO C: Resposta INCORRETA (Fim de jogo imediato por derrota - Regra: perde tudo)
         if (!acertou) {
             partida.setStatus(StatusPartida.ELIMINADO);
             partida.setFinalizadaEm(LocalDateTime.now());
             int acertos = indexAtual; // Quantas perguntas acertou antes de errar
-            long premioAcumulado = obterPremioAcumuladoAte(partida, acertos);
             partida.setNivelAlcancado(acertos);
-            partida.setPontuacaoFinal(premioAcumulado);
+            partida.setPontuacaoFinal(0L); // Regra: errar perde tudo
             partidaRepository.save(partida);
 
             return new ResultadoRespostaResponse(
@@ -182,7 +181,7 @@ public class PartidaService {
                     pergunta.getExplicacao(),
                     StatusPartida.ELIMINADO,
                     acertos,
-                    premioAcumulado,
+                    0L,
                     null,
                     "Não foi dessa vez, você errou"
             );

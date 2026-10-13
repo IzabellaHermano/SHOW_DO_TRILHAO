@@ -1,10 +1,12 @@
 import { Outlet } from 'react-router-dom'
 import Navbar from './Navbar'
+import ColdStartBanner from './ColdStartBanner'
 
 export default function Layout() {
   return (
     <div className="app-container">
       <Navbar />
+      <ColdStartBanner />
       <main className="main-content">
         <Outlet />
       </main>

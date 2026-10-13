@@ -1,9 +1,11 @@
 import axios from 'axios'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8081/api'
+// A URL da API vem estritamente das variáveis de ambiente (.env.development / .env.production)
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
 
 export const api = axios.create({
   baseURL: API_URL,
+  timeout: 60000, // 60s para acomodar cold-start do plano gratuito do Render
   headers: {
     'Content-Type': 'application/json',
   },
@@ -21,15 +23,38 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
-// Interceptador de resposta para tratar erros comuns (ex: token expirado)
+// Interceptador de resposta para tratar erros comuns e cold start do Render
 api.interceptors.response.use(
-  (response) => response,
-  (error) => {
+  (response) => {
+    // Se respondeu com sucesso, notifica que o servidor está online/aquecido
+    window.dispatchEvent(new CustomEvent('server-online'))
+    return response
+  },
+  async (error) => {
+    const originalRequest = error.config
+
     if (error.response && error.response.status === 401) {
       // Token inválido ou expirado
       localStorage.removeItem('show_trilhao_token')
       localStorage.removeItem('show_trilhao_user')
     }
+
+    // Tratamento de Cold Start no Render: se deu timeout ou erro de rede, tenta mais 1 vez
+    if (
+      (!error.response || error.code === 'ECONNABORTED' || error.message.includes('timeout')) &&
+      originalRequest &&
+      !originalRequest._retry
+    ) {
+      originalRequest._retry = true
+      // Notifica a interface sobre o aquecimento do servidor
+      window.dispatchEvent(
+        new CustomEvent('server-cold-start', {
+          detail: { message: 'O servidor no Render está acordando do modo repouso. Aguarde alguns instantes...' },
+        })
+      )
+      return api(originalRequest)
+    }
+
     return Promise.reject(error)
   }
 )
@@ -64,6 +89,25 @@ export const salaService = {
   },
 }
 
+export const perguntaService = {
+  listarTodas: async () => {
+    const response = await api.get('/perguntas/gestao')
+    return response.data
+  },
+  cadastrar: async (dados) => {
+    const response = await api.post('/perguntas/gestao', dados)
+    return response.data
+  },
+  atualizar: async (id, dados) => {
+    const response = await api.put(`/perguntas/gestao/${id}`, dados)
+    return response.data
+  },
+  excluir: async (id) => {
+    const response = await api.delete(`/perguntas/gestao/${id}`)
+    return response.data
+  },
+}
+
 export const partidaService = {
   iniciarJogador: async (codigoSala) => {
     const response = await api.post('/partidas/iniciar', { codigoSala })
@@ -94,6 +138,13 @@ export const rankingService = {
   },
   obterRankingSala: async (codigo) => {
     const response = await api.get(`/ranking/sala/${codigo}`)
+    return response.data
+  },
+}
+
+export const healthService = {
+  checkHealth: async () => {
+    const response = await api.get('/health')
     return response.data
   },
 }

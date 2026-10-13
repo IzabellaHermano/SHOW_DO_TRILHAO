@@ -8,6 +8,8 @@
    - Destaque Exclusivo: Ouro/Dourado apenas para prêmio/pódio
    ======================================================== */
 
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700;800;900&display=swap');
+
 :root {
   /* Cores Institucionais CPTM */
   --cptm-red: #E2001A;
@@ -24,6 +26,19 @@
   --cptm-gray-border: #424345;
   --cptm-gray-light: #E4E5E7;
   --cptm-gray-subtle: #F4F5F6;
+
+  /* Estética de TV Game Show (Vibrante) */
+  --gradient-tv-stage: linear-gradient(135deg, #B9001D 0%, #6C158D 50%, #1E2875 100%);
+  --gradient-box-darkred: linear-gradient(180deg, #7A000E 0%, #4D0008 100%);
+  --gradient-alt-darkred: linear-gradient(180deg, #6B000D 0%, #3D0006 100%);
+  --gradient-alt-hover: linear-gradient(180deg, #8A0012 0%, #52000A 100%);
+  --blue-tv-num: #0047AB;
+
+  /* Botões de Ação Positiva em Verde */
+  --color-positive: #10B981;
+  --color-positive-hover: #34D399;
+  --color-positive-dark: #059669;
+  --color-positive-glow: rgba(16, 185, 129, 0.45);
 
   /* Neutros e Superfícies */
   --color-white: #FFFFFF;
@@ -47,15 +62,15 @@
   --prize-gold-border: rgba(212, 149, 0, 0.35);
 
   /* Feedback de Jogo (Acerto e Erro) */
-  --color-correct: #15803D;
-  --color-correct-border: #16A34A;
+  --color-correct: #10B981;
+  --color-correct-border: #34D399;
   --color-correct-bg: #DCFCE7;
   --color-wrong: #E2001A;
   --color-wrong-border: #B91C1C;
   --color-wrong-bg: #FEE2E2;
 
-  /* Tipografia Obrigatória do Manual CPTM */
-  --font-family: "Frutiger", "Frutiger LT Std", Arial, Helvetica, sans-serif;
+  /* Tipografia Letreiro de TV / CPTM */
+  --font-family: 'Montserrat', "Frutiger", "Frutiger LT Std", Arial, Helvetica, sans-serif;
 
   /* Raios de Arredondamento */
   --radius-xs: 4px;

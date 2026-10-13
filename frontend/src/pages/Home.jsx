@@ -2,29 +2,36 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { partidaService } from '../services/api'
-import { Play, Trophy, Users, ShieldAlert, ArrowRight, UserPlus } from 'lucide-react'
-import cptmLogoWhite from '../assets/cptm-logo-white.png'
+import { Play, LogIn, UserPlus, Trophy, LayoutDashboard, ArrowRight, ShieldAlert, Train, X } from 'lucide-react'
+import gameLogo from '../assets/logo.png'
 import apresentadorImg from '../assets/apresentador.png'
 
 export default function Home() {
   const navigate = useNavigate()
-  const { isAuthenticated, user } = useAuth()
+  const { user, isAuthenticated } = useAuth()
+
+  const [mostrarModalSala, setMostrarModalSala] = useState(false)
   const [codigoSala, setCodigoSala] = useState('')
   const [nomeVisitante, setNomeVisitante] = useState('')
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
+
+  const handleAbrirSala = () => {
+    setErro('')
+    setMostrarModalSala(true)
+  }
 
   const handleEntrarSala = async (e) => {
     e.preventDefault()
     setErro('')
 
     if (!codigoSala.trim()) {
-      setErro('Informe o código da sala de jogo.')
+      setErro('Por favor, informe o código da sala de jogo (ex: CPTM-2026).')
       return
     }
 
-    if (!isAuthenticated && !nomeVisitante.trim()) {
-      setErro('Visitantes precisam informar um apelido para jogar.')
+    if (!isAuthenticated && (!nomeVisitante.trim() || nomeVisitante.trim().length < 2)) {
+      setErro('Visitantes precisam informar um apelido ou nome (mínimo 2 letras).')
       return
     }
 
@@ -32,149 +39,221 @@ export default function Home() {
     try {
       if (isAuthenticated) {
         const partida = await partidaService.iniciarJogador(codigoSala.trim().toUpperCase())
-        navigate(`/jogo/${partida.id || 'nova'}`)
+        navigate(`/jogo/${partida.id}`)
       } else {
         const partida = await partidaService.iniciarVisitante(
           codigoSala.trim().toUpperCase(),
           nomeVisitante.trim()
         )
-        navigate(`/jogo/${partida.id || 'visitante'}`)
+        navigate(`/jogo/${partida.id}`)
       }
     } catch (err) {
-      console.warn('Conexão offline com o backend de partidas:', err)
-      navigate('/jogo', {
-        state: {
-          codigoSala: codigoSala.toUpperCase(),
-          nomeJogador: isAuthenticated ? user?.nome : nomeVisitante,
-        },
-      })
+      console.error('Erro ao conectar à sala:', err)
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.mensagem ||
+        'Não foi possível conectar à sala. Verifique se o código está correto e ativo.'
+      setErro(msg)
     } finally {
       setCarregando(false)
     }
   }
 
   return (
-    <div className="home-container">
-      {/* Hero Principal do Game Show */}
-      <section className="hero-section">
-        <div className="hero-content">
-          {/* Selo Oficial Show do Trilhão • CPTM */}
-          <div className="badge badge-cptm">
-            <img
-              src={cptmLogoWhite}
-              alt="CPTM"
-              className="badge-cptm-icon"
-            />
-            <span>Show do Trilhão • CPTM</span>
+    <div className="menu-wireframe-container">
+      {/* Container Central do Menu do Show */}
+      <div className="menu-card-main">
+        {/* Logo Central de Destaque */}
+        <div className="menu-logo-wrapper">
+          <img
+            src={gameLogo}
+            alt="Show do Trilhão - CPTM"
+            className="menu-main-logo"
+          />
+        </div>
+
+        <p className="menu-tagline">
+          O Game Show do Transporte sobre Trilhos de São Paulo
+        </p>
+
+        {/* Apresentador Discreto na Boas-Vindas */}
+        <div className="menu-host-badge">
+          <img
+            src={apresentadorImg}
+            alt="Silvio dos Trilhos"
+            className="menu-host-avatar"
+          />
+          <span>Comandado por <strong>Silvio dos Trilhos</strong> • Rumo a 1 Milhão!</span>
+        </div>
+
+        {/* Informação do Jogador Logado (se houver) */}
+        {isAuthenticated && (
+          <div className="menu-user-status">
+            <span>Passageiro conectado: <strong>{user?.nome}</strong> ({user?.role === 'ROLE_APRESENTADOR' ? 'Apresentador' : user?.role === 'ROLE_ADMIN' ? 'Administrador' : 'Jogador Oficial'})</span>
           </div>
+        )}
 
-          <h1 className="hero-title">
-            Acerte as perguntas e chegue ao <span className="highlight-trilhao">Trilhão</span>!
-          </h1>
-          <p className="hero-subtitle">
-            Embarque no maior game show do transporte sobre trilhos de São Paulo.
-            Responda 10 perguntas desafiadoras sobre a CPTM e cultura geral para conquistar o prêmio máximo!
-          </p>
+        {/* AÇÕES PRINCIPAIS DO MENU */}
+        <div className="menu-actions-stack">
+          {/* Botão Primário de Destaque */}
+          <button
+            type="button"
+            id="btn-iniciar-partida"
+            onClick={handleAbrirSala}
+            className="btn btn-primary-show btn-pulse"
+          >
+            <Play size={24} className="icon-play" />
+            <span>Iniciar Partida / Entrar com Código de Sala</span>
+          </button>
 
-          {/* Card de Entrada Rápida na Sala */}
-          <div className="card enter-room-card">
-            <h2 className="card-title">
-              <Users size={22} />
-              <span>Entrar em uma Sala de Jogo</span>
-            </h2>
+          {/* Botões Secundários: Entrar e Criar Conta */}
+          <div className="menu-secondary-buttons">
+            {!isAuthenticated ? (
+              <>
+                <button
+                  type="button"
+                  id="btn-entrar"
+                  onClick={() => navigate('/login', { state: { register: false } })}
+                  className="btn btn-secondary-show"
+                >
+                  <LogIn size={18} />
+                  <span>Entrar</span>
+                </button>
+
+                <button
+                  type="button"
+                  id="btn-criar-conta"
+                  onClick={() => navigate('/login', { state: { register: true } })}
+                  className="btn btn-secondary-show"
+                >
+                  <UserPlus size={18} />
+                  <span>Criar Conta</span>
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => navigate('/login')}
+                className="btn btn-secondary-show"
+              >
+                <span>Alternar Conta</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* SEÇÃO INFERIOR: LINKS SEPARADOS */}
+        <div className="menu-links-separated">
+          <button
+            type="button"
+            id="link-ranking-geral"
+            onClick={() => navigate('/ranking')}
+            className="menu-link-item"
+          >
+            <Trophy size={18} className="link-icon gold-icon" />
+            <span>Ranking Geral</span>
+          </button>
+
+          <span className="menu-links-divider" aria-hidden="true">•</span>
+
+          <button
+            type="button"
+            id="link-painel-apresentador"
+            onClick={() => navigate('/apresentador')}
+            className="menu-link-item"
+          >
+            <LayoutDashboard size={18} className="link-icon" />
+            <span>Painel do Apresentador / Admin</span>
+          </button>
+        </div>
+      </div>
+
+      {/* MODAL / TELA DE ENTRAR COM CÓDIGO DE SALA */}
+      {mostrarModalSala && (
+        <div className="modal-backdrop" role="dialog" aria-modal="true">
+          <div className="modal-dialog card">
+            <div className="modal-header">
+              <div className="modal-title-wrap">
+                <Train size={24} className="icon-train" />
+                <h3>Entrar com Código de Sala</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMostrarModalSala(false)}
+                className="btn-close-modal"
+                aria-label="Fechar janela"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <p className="modal-desc">
+              Digite o código da sala fornecido pelo seu mestre de sala ou apresentador para iniciar sua jornada nos trilhos.
+            </p>
 
             {erro && (
               <div className="alert alert-danger" role="alert">
-                <ShieldAlert size={20} />
+                <ShieldAlert size={18} />
                 <span>{erro}</span>
               </div>
             )}
 
-            <form onSubmit={handleEntrarSala} className="room-form">
+            <form onSubmit={handleEntrarSala} className="modal-form">
               <div className="form-group">
-                <label htmlFor="codigoSala">Código de Acesso da Estação:</label>
+                <label htmlFor="inputCodigoSala">Código da Sala:</label>
                 <input
-                  id="codigoSala"
+                  id="inputCodigoSala"
                   type="text"
-                  placeholder="Ex: CPTM2026"
+                  required
+                  placeholder="Ex: CPTM-2026"
                   value={codigoSala}
                   onChange={(e) => setCodigoSala(e.target.value.toUpperCase())}
                   className="input-field uppercase-input"
-                  maxLength={10}
-                  autoComplete="off"
+                  maxLength={20}
+                  autoFocus
                 />
               </div>
 
               {!isAuthenticated && (
                 <div className="form-group">
-                  <label htmlFor="nomeVisitante">Seu Apelido / Nome de Passageiro:</label>
+                  <label htmlFor="inputNomeVisitante">Seu Nome / Apelido de Visitante:</label>
                   <input
-                    id="nomeVisitante"
+                    id="inputNomeVisitante"
                     type="text"
-                    placeholder="Como deseja ser chamado no ranking?"
+                    required
+                    placeholder="Como deseja ser chamado no ranking da sala?"
                     value={nomeVisitante}
                     onChange={(e) => setNomeVisitante(e.target.value)}
                     className="input-field"
-                    maxLength={30}
+                    maxLength={35}
                   />
+                  <small className="form-help">
+                    Visitantes disputam o ranking da sala. Para disputar o ranking geral de milionários da CPTM, faça login.
+                  </small>
                 </div>
               )}
 
-              <button
-                type="submit"
-                disabled={carregando}
-                className="btn btn-primary btn-block btn-lg btn-pulse"
-              >
-                <Play size={20} />
-                <span>{carregando ? 'Conectando ao Trem...' : 'Entrar na Corrida'}</span>
-                <ArrowRight size={20} />
-              </button>
+              <div className="modal-footer-actions">
+                <button
+                  type="button"
+                  onClick={() => setMostrarModalSala(false)}
+                  className="btn btn-secondary btn-md"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={carregando}
+                  className="btn btn-positive-action btn-lg"
+                >
+                  <span>{carregando ? 'Conectando...' : 'Entrar no Jogo'}</span>
+                  <ArrowRight size={18} />
+                </button>
+              </div>
             </form>
           </div>
-
-          {/* Atalhos Rápidos Alinhados */}
-          <div className="quick-actions">
-            <button
-              type="button"
-              onClick={() => navigate('/ranking')}
-              className="btn btn-secondary btn-md"
-            >
-              <Trophy size={18} />
-              <span>Ver Ranking Geral</span>
-            </button>
-
-            {!isAuthenticated && (
-              <button
-                type="button"
-                onClick={() => navigate('/login')}
-                className="btn btn-outline btn-md"
-              >
-                <UserPlus size={18} />
-                <span>Fazer Login ou Cadastrar</span>
-              </button>
-            )}
-          </div>
         </div>
-
-        {/* Ilustração e Apresentador no Palco */}
-        <div className="hero-visual">
-          <div className="presenter-card">
-            <div className="presenter-frame">
-              <img
-                src={apresentadorImg}
-                alt="Apresentador do Show do Trilhão"
-                className="presenter-image"
-              />
-            </div>
-            <div className="presenter-balloon">
-              <p>
-                <strong>"Preparado para a viagem rumo ao Trilhão?"</strong>
-              </p>
-              <span>Digite o código de acesso e mostre que você domina os trilhos!</span>
-            </div>
-          </div>
-        </div>
-      </section>
+      )}
     </div>
   )
 }
