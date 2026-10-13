@@ -1,8 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { rankingService } from '../services/api'
+import { useToast } from '../context/ToastContext'
 import { Trophy, Award, Search, Users, RefreshCw, CheckCircle, UserCheck, UserX } from 'lucide-react'
+import CptmLogo from '../components/CptmLogo'
+import Podium from '../components/Podium'
 
 export default function Ranking() {
+  const toast = useToast()
   const [aba, setAba] = useState('geral') // 'geral' | 'sala'
   const [codigoSala, setCodigoSala] = useState('CPTM-2026')
   const [ranking, setRanking] = useState([])
@@ -24,8 +28,8 @@ export default function Ranking() {
         setRanking([])
       }
     } catch (err) {
-      console.warn('Erro ao carregar dados do ranking:', err)
-      setErro('Não foi possível carregar o ranking no momento. Verifique a conexão com o servidor.')
+      console.warn('Erro ao carregar ranking:', err)
+      setErro('Não foi possível carregar os dados de pontuação do servidor.')
       setRanking([])
     } finally {
       setCarregando(false)
@@ -58,58 +62,51 @@ export default function Ranking() {
     }
   }
 
-  const primeiro = ranking[0]
-  const segundo = ranking[1]
-  const terceiro = ranking[2]
-
   return (
-    <div className="ranking-page-container">
-      {/* Cabeçalho do Quadro de Líderes */}
-      <header className="ranking-header">
-        <div className="badge badge-cptm">
-          <Trophy size={18} />
-          <span>Quadro Oficial de Líderes CPTM</span>
-        </div>
-        <h1 className="page-title">Galeria dos Milionários dos Trilhos</h1>
-        <p className="page-subtitle">
-          Veja quem conquistou os maiores prêmios e acertou mais estações na ferrovia paulista.
+    <div className="ranking-page-shell">
+      {/* Cabeçalho */}
+      <header style={{ textAlign: 'center', marginBottom: '2rem' }}>
+        <CptmLogo size="lg" />
+        <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '2.4rem', marginTop: '0.75rem', letterSpacing: '0.02em' }}>
+          Galeria dos Milionários dos Trilhos
+        </h1>
+        <p style={{ color: 'var(--text-muted)', fontSize: '1rem', maxWidth: 600, margin: '0.5rem auto 0 auto' }}>
+          Conheça os passageiros que dominaram as estações da CPTM e acumularam as maiores premiações.
         </p>
 
-        {/* Abas: Ranking Geral vs Ranking por Sala */}
-        <div className="ranking-tabs-group" role="tablist">
+        {/* Abas */}
+        <div className="ranking-top-tabs" role="tablist">
           <button
             type="button"
-            id="tab-ranking-geral"
             role="tab"
             aria-selected={aba === 'geral'}
-            className={`btn ${aba === 'geral' ? 'btn-positive-action' : 'btn-secondary'} btn-md`}
+            className={`btn-cptm ${aba === 'geral' ? 'btn-cptm-primary' : 'btn-cptm-secondary'} btn-md`}
             onClick={() => setAba('geral')}
           >
             <Award size={18} />
-            <span>Ranking Geral (Contas Cadastradas)</span>
+            <span>Ranking Geral (Oficial)</span>
           </button>
 
           <button
             type="button"
-            id="tab-ranking-sala"
             role="tab"
             aria-selected={aba === 'sala'}
-            className={`btn ${aba === 'sala' ? 'btn-positive-action' : 'btn-secondary'} btn-md`}
+            className={`btn-cptm ${aba === 'sala' ? 'btn-cptm-primary' : 'btn-cptm-secondary'} btn-md`}
             onClick={() => setAba('sala')}
           >
             <Users size={18} />
-            <span>Ranking por Sala (Inclui Visitantes)</span>
+            <span>Ranking por Sala</span>
           </button>
         </div>
 
-        {/* Formulário de Busca por Sala quando na aba "sala" */}
+        {/* Busca por Sala */}
         {aba === 'sala' && (
           <form
             onSubmit={(e) => {
               e.preventDefault()
               carregarRanking()
             }}
-            className="room-search-bar"
+            className="ranking-search-form"
           >
             <input
               type="text"
@@ -117,68 +114,35 @@ export default function Ranking() {
               placeholder="Digite o código da sala (ex: CPTM-2026)"
               value={codigoSala}
               onChange={(e) => setCodigoSala(e.target.value.toUpperCase())}
-              className="input-field"
+              className="game-input game-input-uppercase"
             />
-            <button type="submit" className="btn btn-positive-action btn-md">
+            <button type="submit" className="btn-cptm btn-cptm-primary btn-md">
               <Search size={16} />
-              <span>Consultar Sala</span>
+              <span>Buscar</span>
             </button>
           </form>
         )}
       </header>
 
-      {/* PÓDIO DOS 3 PRIMEIROS COLOCADOS */}
+      {/* PÓDIO 3D DOS 3 PRIMEIROS */}
       {ranking.length >= 1 && (
-        <section className="podium-section" aria-label="Pódio dos Melhores Colocados">
-          {/* 2º Lugar */}
-          {segundo ? (
-            <div className="podium-step step-silver">
-              <div className="podium-badge-medal">🥈 2º Lugar</div>
-              <h4 className="podium-user-name">{segundo.nomeJogador}</h4>
-              <span className="podium-score-tag">{formatarMoeda(segundo.pontuacaoFinal)}</span>
-              <span className="podium-level-sub">Nível {segundo.nivelAlcancado} de 10</span>
-            </div>
-          ) : (
-            <div className="podium-step step-placeholder" />
-          )}
-
-          {/* 1º Campeão (Centro, Mais Alto) */}
-          {primeiro && (
-            <div className="podium-step step-gold">
-              <div className="podium-crown">👑</div>
-              <div className="podium-badge-medal">🥇 Campeão Absoluto</div>
-              <h3 className="podium-user-name">{primeiro.nomeJogador}</h3>
-              <span className="podium-score-tag gold-glow">{formatarMoeda(primeiro.pontuacaoFinal)}</span>
-              <span className="podium-level-sub">Nível {primeiro.nivelAlcancado} de 10</span>
-            </div>
-          )}
-
-          {/* 3º Lugar */}
-          {terceiro ? (
-            <div className="podium-step step-bronze">
-              <div className="podium-badge-medal">🥉 3º Lugar</div>
-              <h4 className="podium-user-name">{terceiro.nomeJogador}</h4>
-              <span className="podium-score-tag">{formatarMoeda(terceiro.pontuacaoFinal)}</span>
-              <span className="podium-level-sub">Nível {terceiro.nivelAlcancado} de 10</span>
-            </div>
-          ) : (
-            <div className="podium-step step-placeholder" />
-          )}
-        </section>
+        <div style={{ marginBottom: '2.5rem' }}>
+          <Podium players={ranking.slice(0, 3)} formatScore={formatarMoeda} />
+        </div>
       )}
 
-      {/* TABELA DE CLASSIFICAÇÃO COM TODAS AS COLUNAS PEDIDAS */}
-      <div className="card ranking-table-card">
-        <div className="ranking-table-top-row">
-          <h3>
+      {/* TABELA DE CLASSIFICAÇÃO */}
+      <div className="ranking-table-panel">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.25rem' }}>
             {aba === 'geral'
-              ? 'Classificação Geral de Jogadores Cadastrados'
+              ? 'Classificação Geral de Milionários'
               : `Resultados da Sala: ${codigoSala || ''}`}
-          </h3>
+          </h2>
           <button
             type="button"
             onClick={carregarRanking}
-            className="btn btn-secondary btn-xs"
+            className="btn-cptm btn-cptm-secondary btn-sm"
             title="Atualizar ranking"
           >
             <RefreshCw size={14} className={carregando ? 'spin' : ''} />
@@ -187,79 +151,70 @@ export default function Ranking() {
         </div>
 
         {erro && (
-          <div className="alert alert-warning" role="alert">
+          <div className="game-alert game-alert-warning" role="alert">
             <span>{erro}</span>
           </div>
         )}
 
         {carregando ? (
-          <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-            <RefreshCw size={32} className="spin" style={{ color: 'var(--cptm-red)', marginBottom: '0.75rem' }} />
-            <p style={{ fontWeight: 700, color: 'var(--cptm-gray)' }}>Buscando partidas no banco de dados...</p>
-          </div>
+          <p style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
+            Consultando registros no banco de dados...
+          </p>
         ) : ranking.length === 0 ? (
-          <div style={{ textAlign: 'center', padding: '3.5rem 1rem', color: 'var(--text-muted)' }}>
-            <p>Nenhuma partida finalizada registrada para esta consulta.</p>
-            <p style={{ fontSize: '0.875rem', marginTop: '0.5rem' }}>
-              Inicie uma partida e dispute o prêmio de 1 Milhão para aparecer no topo!
-            </p>
-          </div>
+          <p style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
+            Nenhuma partida finalizada registrada nesta modalidade.
+          </p>
         ) : (
-          <div className="table-responsive">
-            <table className="ranking-full-table">
+          <div style={{ overflowX: 'auto' }}>
+            <table className="cptm-table">
               <thead>
                 <tr>
                   <th style={{ width: '80px' }}>Posição</th>
-                  <th>Passageiro / Jogador</th>
+                  <th>Passageiro</th>
                   <th>Tipo</th>
-                  <th style={{ textAlign: 'center' }}>Nível / Acertos</th>
-                  <th style={{ textAlign: 'right' }}>Prêmio Acumulado</th>
+                  <th style={{ textAlign: 'center' }}>Acertos</th>
+                  <th style={{ textAlign: 'right' }}>Prêmio</th>
                   <th style={{ textAlign: 'right' }}>Data</th>
                 </tr>
               </thead>
               <tbody>
-                {ranking.map((item, index) => {
-                  const isTop3 = index < 3
-                  return (
-                    <tr key={item.id || index} className={isTop3 ? 'top-three-row' : ''}>
-                      <td className="rank-position-col">
-                        {index === 0 ? '🥇 1º' : index === 1 ? '🥈 2º' : index === 2 ? '🥉 3º' : `${index + 1}º`}
-                      </td>
-                      <td className="rank-player-col">
-                        <strong>{item.nomeJogador}</strong>
+                {ranking.map((item, index) => (
+                  <tr key={item.id || index}>
+                    <td style={{ fontWeight: 900, color: index === 0 ? '#FFC629' : index === 1 ? '#94A3B8' : index === 2 ? '#D97706' : 'var(--text-light)' }}>
+                      {index === 0 ? '🥇 1º' : index === 1 ? '🥈 2º' : index === 2 ? '🥉 3º' : `${index + 1}º`}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
+                        <strong style={{ color: '#FFFFFF' }}>{item.nomeJogador}</strong>
                         {item.status === 'VITORIA' && (
-                          <span className="badge-milionario">
-                            <CheckCircle size={12} /> Milionário
+                          <span style={{ fontSize: '0.72rem', color: '#00CC74', display: 'inline-flex', alignItems: 'center', gap: '2px', background: 'rgba(0, 204, 116, 0.15)', padding: '0.1rem 0.4rem', borderRadius: 4 }}>
+                            <CheckCircle size={11} /> Milionário
                           </span>
                         )}
-                      </td>
-                      <td className="rank-type-col">
-                        {item.tipoJogador === 'JOGADOR' ? (
-                          <span className="tag-jogador">
-                            <UserCheck size={13} /> Jogador Oficial
-                          </span>
-                        ) : (
-                          <span className="tag-visitante">
-                            <UserX size={13} /> Visitante
-                          </span>
-                        )}
-                      </td>
-                      <td className="rank-level-col" style={{ textAlign: 'center' }}>
-                        <span className="level-counter-badge">
-                          {item.nivelAlcancado} de 10
+                      </div>
+                    </td>
+                    <td>
+                      {item.tipoJogador === 'JOGADOR' ? (
+                        <span style={{ fontSize: '0.78rem', color: '#0879F9', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                          <UserCheck size={13} /> Oficial
                         </span>
-                      </td>
-                      <td className="rank-prize-col" style={{ textAlign: 'right' }}>
-                        <span className="prize-amount-badge">
-                          {formatarMoeda(item.pontuacaoFinal)}
+                      ) : (
+                        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                          <UserX size={13} /> Visitante
                         </span>
-                      </td>
-                      <td className="rank-date-col" style={{ textAlign: 'right', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        {formatarData(item.data)}
-                      </td>
-                    </tr>
-                  )
-                })}
+                      )}
+                    </td>
+                    <td style={{ textAlign: 'center', fontWeight: 700 }}>
+                      {item.nivelAlcancado} de 10
+                    </td>
+                    <td style={{ textAlign: 'right', fontFamily: 'var(--font-display)', fontWeight: 900, color: '#FFC629' }}>
+                      {formatarMoeda(item.pontuacaoFinal)}
+                    </td>
+                    <td style={{ textAlign: 'right', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
+                      {formatarData(item.data)}
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>

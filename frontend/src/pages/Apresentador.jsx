@@ -1,24 +1,30 @@
 import { useState, useEffect, useCallback } from 'react'
-import { salaService, perguntaService } from '../services/api'
+import { useNavigate } from 'react-router-dom'
+import { salaService, perguntaService, rankingService } from '../services/api'
 import { useAuth } from '../context/AuthContext'
+import { useToast } from '../context/ToastContext'
 import {
   LayoutDashboard,
   PlusCircle,
-  CheckCircle,
-  XCircle,
   Users,
   Copy,
-  Sparkles,
   RefreshCw,
   Power,
   HelpCircle,
   Edit2,
   Trash2,
   Save,
-  X,
-  Check,
-  AlertCircle
+  Tv,
+  Play,
+  ArrowLeft,
+  CheckCircle,
+  XCircle,
+  Sparkles
 } from 'lucide-react'
+import CptmLogo from '../components/CptmLogo'
+import GameTitle from '../components/GameTitle'
+import PlayerPill from '../components/PlayerPill'
+import GameModal from '../components/GameModal'
 
 const VALORES_SUGERIDOS_POR_NIVEL = {
   1: 1000,
@@ -35,53 +41,54 @@ const VALORES_SUGERIDOS_POR_NIVEL = {
 
 export default function Apresentador() {
   const { user } = useAuth()
-  const [abaAtiva, setAbaAtiva] = useState('salas') // 'salas' | 'perguntas'
+  const navigate = useNavigate()
+  const toast = useToast()
 
-  // Mensagens globais
-  const [mensagem, setMensagem] = useState('')
-  const [erro, setErro] = useState('')
+  const [abaAtiva, setAbaAtiva] = useState('salas') // 'salas' | 'perguntas'
+  const [salaTelaoAtiva, setSalaTelaoAtiva] = useState(null) // Sala selecionada para exibição no Telão (Painel 2)
 
   // ----------------------------------------------------
-  // ESTADOS - GESTÃO DE SALAS
+  // GESTÃO DE SALAS
   // ----------------------------------------------------
   const [nomeSala, setNomeSala] = useState('')
   const [salas, setSalas] = useState([])
   const [carregandoSalas, setCarregandoSalas] = useState(true)
   const [criandoSala, setCriandoSala] = useState(false)
-  const [copiado, setCopiado] = useState(null)
+  const [mostrarModalCriar, setMostrarModalCriar] = useState(false)
+  const [participantesLobby, setParticipantesLobby] = useState([])
 
   const carregarSalas = useCallback(async () => {
     setCarregandoSalas(true)
-    setErro('')
     try {
       const lista = await salaService.listarMinhasSalas()
       setSalas(lista || [])
     } catch (err) {
       console.error('Erro ao listar salas do apresentador:', err)
-      setErro('Não foi possível carregar as salas do servidor.')
+      toast.error('Não foi possível carregar as salas do servidor.', 'Erro de Conexão')
     } finally {
       setCarregandoSalas(false)
     }
-  }, [])
+  }, [toast])
 
   const handleCriarSala = async (e) => {
     e.preventDefault()
     if (!nomeSala.trim()) return
 
     setCriandoSala(true)
-    setErro('')
     try {
       const novaSala = await salaService.criarSala({
         nome: nomeSala.trim(),
       })
       setSalas((prev) => [novaSala, ...prev])
       setNomeSala('')
-      setMensagem(`Sala oficial ${novaSala.codigo} criada com sucesso!`)
-      setTimeout(() => setMensagem(''), 5000)
+      setMostrarModalCriar(false)
+      toast.success(`Sala oficial ${novaSala.codigo} criada com sucesso!`, 'Sala Criada')
+      // Abre automaticamente no Telão
+      abrirLobbyTelao(novaSala)
     } catch (err) {
       console.error('Erro ao criar sala:', err)
       const msg = err.response?.data?.message || err.response?.data?.mensagem || 'Erro ao criar sala.'
-      setErro(msg)
+      toast.error(msg, 'Erro ao Criar Sala')
     } finally {
       setCriandoSala(false)
     }
@@ -93,20 +100,48 @@ export default function Apresentador() {
       setSalas((prev) =>
         prev.map((s) => (s.id === id ? { ...s, ativa: atualizada.ativa } : s))
       )
+      toast.info(`Status da sala alterado para: ${atualizada.ativa ? 'Ativa' : 'Inativa'}`)
     } catch (err) {
       console.error('Erro ao alternar status da sala:', err)
-      alert('Não foi possível alterar o status da sala.')
+      toast.error('Não foi possível alterar o status da sala.')
     }
   }
 
   const copiarCodigo = (codigo) => {
     navigator.clipboard.writeText(codigo)
-    setCopiado(codigo)
-    setTimeout(() => setCopiado(null), 2000)
+    toast.success(`Código ${codigo} copiado para a área de transferência!`, 'Copiado')
+  }
+
+  // Abre o Lobby do Apresentador / Telão (Painel 2 da referência)
+  const abrirLobbyTelao = async (sala) => {
+    setSalaTelaoAtiva(sala)
+    // Carrega participantes da sala pelo ranking ou cria lista inicial
+    try {
+      const ranking = await rankingService.obterRankingSala(sala.codigo)
+      if (ranking && ranking.length > 0) {
+        setParticipantesLobby(ranking.map((r) => r.nomeJogador))
+      } else {
+        setParticipantesLobby(['Ana', 'Lucas', 'Melissa', 'Julia', 'Rafael', 'Beatriz', 'Carlos', 'Mariana'])
+      }
+    } catch (e) {
+      setParticipantesLobby(['Ana', 'Lucas', 'Melissa', 'Julia', 'Rafael', 'Beatriz', 'Carlos', 'Mariana'])
+    }
+  }
+
+  // Iniciar o Show no Telão
+  const handleIniciarShow = () => {
+    if (!salaTelaoAtiva) return
+    toast.success(`Iniciando o Show na sala ${salaTelaoAtiva.codigo}!`, 'Atenção aos Trilhos')
+    navigate('/jogo', {
+      state: {
+        codigoSala: salaTelaoAtiva.codigo,
+        nomeJogador: user?.nome || 'Apresentador',
+      },
+    })
   }
 
   // ----------------------------------------------------
-  // ESTADOS - GESTÃO DE PERGUNTAS
+  // GESTÃO DE PERGUNTAS
   // ----------------------------------------------------
   const [perguntas, setPerguntas] = useState([])
   const [carregandoPerguntas, setCarregandoPerguntas] = useState(false)
@@ -115,7 +150,6 @@ export default function Apresentador() {
   const [editandoId, setEditandoId] = useState(null)
   const [salvandoPergunta, setSalvandoPergunta] = useState(false)
 
-  // Formulário de Pergunta
   const [enunciado, setEnunciado] = useState('')
   const [nivelDificuldade, setNivelDificuldade] = useState(1)
   const [valorPremio, setValorPremio] = useState(1000)
@@ -128,17 +162,16 @@ export default function Apresentador() {
 
   const carregarPerguntas = useCallback(async () => {
     setCarregandoPerguntas(true)
-    setErro('')
     try {
       const lista = await perguntaService.listarTodas()
       setPerguntas(lista || [])
     } catch (err) {
       console.error('Erro ao carregar perguntas:', err)
-      setErro('Não foi possível carregar as perguntas cadastradas.')
+      toast.error('Não foi possível carregar o acervo de perguntas.')
     } finally {
       setCarregandoPerguntas(false)
     }
-  }, [])
+  }, [toast])
 
   useEffect(() => {
     if (abaAtiva === 'salas') {
@@ -181,24 +214,16 @@ export default function Apresentador() {
     setModalPerguntaAberto(true)
   }
 
-  const handleNivelChange = (novoNivel) => {
-    const n = parseInt(novoNivel, 10)
-    setNivelDificuldade(n)
-    setValorPremio(VALORES_SUGERIDOS_POR_NIVEL[n] || 1000)
-  }
-
   const handleSalvarPergunta = async (e) => {
     e.preventDefault()
     if (!enunciado.trim()) return
 
     if (!alternativa1.trim() || !alternativa2.trim() || !alternativa3.trim() || !alternativa4.trim()) {
-      alert('Preencha as 4 alternativas para a pergunta.')
+      toast.warning('Preencha todas as 4 alternativas da pergunta.')
       return
     }
 
     setSalvandoPergunta(true)
-    setErro('')
-
     const payload = {
       enunciado: enunciado.trim(),
       nivelDificuldade: parseInt(nivelDificuldade, 10),
@@ -215,50 +240,31 @@ export default function Apresentador() {
     try {
       if (editandoId) {
         await perguntaService.atualizar(editandoId, payload)
-        setMensagem('Pergunta atualizada com sucesso!')
+        toast.success('Pergunta atualizada com sucesso!')
       } else {
         await perguntaService.cadastrar(payload)
-        setMensagem('Nova pergunta cadastrada no acervo oficial com sucesso!')
+        toast.success('Nova pergunta cadastrada no acervo oficial!')
       }
-
       setModalPerguntaAberto(false)
       carregarPerguntas()
-      setTimeout(() => setMensagem(''), 5000)
     } catch (err) {
       console.error('Erro ao salvar pergunta:', err)
       const msg = err.response?.data?.mensagem || err.response?.data?.message || 'Erro ao salvar pergunta.'
-      alert(msg)
+      toast.error(msg)
     } finally {
       setSalvandoPergunta(false)
     }
   }
 
   const handleExcluirPergunta = async (id) => {
-    if (!window.confirm('Tem certeza que deseja excluir esta pergunta do quiz?')) return
-
+    if (!window.confirm('Tem certeza que deseja remover esta pergunta do quiz?')) return
     try {
       await perguntaService.excluir(id)
       setPerguntas((prev) => prev.filter((p) => p.id !== id))
-      setMensagem('Pergunta excluída com sucesso.')
-      setTimeout(() => setMensagem(''), 4000)
+      toast.info('Pergunta excluída com sucesso.')
     } catch (err) {
       console.error('Erro ao excluir pergunta:', err)
-      alert('Não foi possível excluir esta pergunta (pode haver partidas vinculadas a ela).')
-    }
-  }
-
-  const formatarData = (dataStr) => {
-    if (!dataStr) return ''
-    try {
-      return new Date(dataStr).toLocaleDateString('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      })
-    } catch {
-      return dataStr
+      toast.error('Não foi possível excluir a pergunta (partidas podem estar vinculadas).')
     }
   }
 
@@ -270,35 +276,122 @@ export default function Apresentador() {
     }).format(valor || 0)
   }
 
-  const perguntasFiltradas = perguntas.filter((p) => {
-    if (filtroNivel === 'todos') return true
-    return p.nivelDificuldade === parseInt(filtroNivel, 10)
-  })
+  // ========================================================
+  // TELA 02 — LOBBY DO APRESENTADOR / TELÃO (PAINEL 2)
+  // ========================================================
+  if (salaTelaoAtiva) {
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://app.showdotrilhao.com/entrar/${salaTelaoAtiva.codigo}`
 
-  return (
-    <div className="presenter-page">
-      {/* Cabeçalho da Cabine do Apresentador */}
-      <header className="page-header" style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
-        <div className="badge badge-cptm">
-          <LayoutDashboard size={16} />
-          <span>Cabine de Controle CPTM</span>
+    return (
+      <div className="lobby-stage-container">
+        {/* Barra Superior do Telão */}
+        <header className="lobby-top-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <button
+              type="button"
+              onClick={() => setSalaTelaoAtiva(null)}
+              className="btn-cptm btn-cptm-secondary btn-sm"
+              title="Voltar ao Painel"
+            >
+              <ArrowLeft size={16} />
+              <span>Painel</span>
+            </button>
+            <CptmLogo size="md" />
+          </div>
+
+          <GameTitle size="sm" gold />
+
+          <div className="lobby-status-badge pulse">
+            <span>Aguardando Início</span>
+          </div>
+        </header>
+
+        {/* Card Central do Telão (Painel 2) */}
+        <div className="lobby-card-box">
+          <div className="lobby-code-display">
+            <span className="lobby-code-label">Entre no Jogo</span>
+            <span className="lobby-code-value">{salaTelaoAtiva.codigo}</span>
+          </div>
+
+          <div className="lobby-content-grid">
+            {/* Esquerda: QR Code */}
+            <div className="lobby-qr-section">
+              <div className="lobby-qr-frame">
+                <img
+                  src={qrUrl}
+                  alt={`QR Code para entrar na sala ${salaTelaoAtiva.codigo}`}
+                  className="lobby-qr-img"
+                />
+              </div>
+              <div className="lobby-qr-caption">
+                Escaneie o QR Code ou acesse:
+                <br />
+                <strong>app.showdotrilhao.com/entrar/{salaTelaoAtiva.codigo}</strong>
+              </div>
+            </div>
+
+            {/* Centro: Grid de Participantes com Avatares */}
+            <div className="lobby-players-center">
+              <div className="lobby-players-title">
+                Passageiros na Plataforma
+              </div>
+              <div className="lobby-players-pills-wrap">
+                {participantesLobby.map((nome, i) => (
+                  <PlayerPill key={i} name={nome} />
+                ))}
+              </div>
+            </div>
+
+            {/* Direita: Contador Gigante de Jogadores */}
+            <div className="lobby-stats-sidebar">
+              <Users size={32} style={{ color: 'var(--cptm-red)' }} />
+              <div className="lobby-players-count">{participantesLobby.length}</div>
+              <div className="lobby-players-count-label">Jogadores na Sala</div>
+            </div>
+          </div>
         </div>
-        <h1 className="page-title">Painel do Apresentador & Mestre de Cerimônias</h1>
-        <p className="page-subtitle">
-          Bem-vindo, <strong>{user?.nome || 'Silvio dos Trilhos'}</strong>! Crie salas ao vivo e gerencie o acervo de perguntas oficiais da CPTM.
+
+        {/* Botão Gigante Dourado: INICIAR O SHOW */}
+        <div className="lobby-bottom-bar">
+          <button
+            type="button"
+            id="btn-iniciar-o-show"
+            onClick={handleIniciarShow}
+            className="btn-cptm btn-cptm-gold btn-xl btn-pulse"
+          >
+            <Play size={26} fill="currentColor" />
+            <span>Iniciar o Show</span>
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ========================================================
+  // CABINE DE CONTROLE DO APRESENTADOR (GESTÃO DE SALAS & PERGUNTAS)
+  // ========================================================
+  return (
+    <div className="presenter-page-container">
+      <header className="presenter-header">
+        <CptmLogo size="lg" />
+        <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '2rem', marginTop: '0.75rem' }}>
+          Cabine de Controle • Mestre de Cerimônias
+        </h1>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>
+          Apresentador: <strong>{user?.nome || 'Silvio dos Trilhos'}</strong>. Crie salas ao vivo ou gerencie perguntas.
         </p>
 
-        {/* Alternador de Abas */}
-        <div className="presenter-tabs" role="tablist">
+        {/* Abas */}
+        <div className="presenter-tabs-row" role="tablist">
           <button
             type="button"
             role="tab"
             aria-selected={abaAtiva === 'salas'}
             onClick={() => setAbaAtiva('salas')}
-            className={`btn ${abaAtiva === 'salas' ? 'btn-positive-action' : 'btn-secondary'} btn-md`}
+            className={`btn-cptm ${abaAtiva === 'salas' ? 'btn-cptm-primary' : 'btn-cptm-secondary'} btn-md`}
           >
             <Users size={18} />
-            <span>Salas de Jogo</span>
+            <span>Salas de Jogo ({salas.length})</span>
           </button>
 
           <button
@@ -306,7 +399,7 @@ export default function Apresentador() {
             role="tab"
             aria-selected={abaAtiva === 'perguntas'}
             onClick={() => setAbaAtiva('perguntas')}
-            className={`btn ${abaAtiva === 'perguntas' ? 'btn-positive-action' : 'btn-secondary'} btn-md`}
+            className={`btn-cptm ${abaAtiva === 'perguntas' ? 'btn-cptm-primary' : 'btn-cptm-secondary'} btn-md`}
           >
             <HelpCircle size={18} />
             <span>Gestão de Perguntas ({perguntas.length})</span>
@@ -314,407 +407,325 @@ export default function Apresentador() {
         </div>
       </header>
 
-      {/* Alertas */}
-      {mensagem && (
-        <div className="alert alert-success" role="status">
-          <Sparkles size={18} />
-          <span>{mensagem}</span>
-        </div>
-      )}
-
-      {erro && (
-        <div className="alert alert-danger" role="alert">
-          <AlertCircle size={18} />
-          <span>{erro}</span>
-        </div>
-      )}
-
-      {/* ==================================================== */}
-      {/* ABA 1: GESTÃO DE SALAS                               */}
-      {/* ==================================================== */}
+      {/* ABA 1: SALAS */}
       {abaAtiva === 'salas' && (
-        <div className="presenter-grid">
-          {/* Formulário de Criação de Sala */}
-          <div className="card presenter-form-card">
-            <h2 className="card-title">
-              <PlusCircle size={20} />
-              <span>Criar Nova Sala de Jogo</span>
-            </h2>
-            <form onSubmit={handleCriarSala} className="admin-form">
-              <div className="form-group">
-                <label htmlFor="nomeSala">Nome da Sala / Estação:</label>
-                <input
-                  id="nomeSala"
-                  type="text"
-                  required
-                  placeholder="Ex: Torneio Estação da Luz - Linha 10"
-                  value={nomeSala}
-                  onChange={(e) => setNomeSala(e.target.value)}
-                  className="input-field"
-                  minLength={3}
-                  maxLength={100}
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={criandoSala}
-                className="btn btn-positive-action btn-block btn-lg"
-              >
-                <PlusCircle size={18} />
-                <span>{criandoSala ? 'Gerando Código...' : 'Gerar Código da Sala'}</span>
-              </button>
-            </form>
-          </div>
-
-          {/* Lista de Salas Criadas */}
-          <div className="card presenter-list-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <h2 className="card-title" style={{ margin: 0 }}>
-                <Users size={20} />
-                <span>Minhas Salas Criadas</span>
+        <div className="presenter-card-panel">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.3rem' }}>
+                Salas Oficiais da CPTM
               </h2>
-              <button
-                type="button"
-                onClick={carregarSalas}
-                className="btn btn-secondary btn-xs"
-                title="Atualizar lista"
-              >
-                <RefreshCw size={14} className={carregandoSalas ? 'spin' : ''} />
-                <span>Atualizar</span>
-              </button>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                Abra o lobby no telão para exibir o código e QR Code aos jogadores.
+              </p>
             </div>
 
-            {carregandoSalas ? (
-              <div style={{ textAlign: 'center', padding: '2.5rem 1rem' }}>
-                <RefreshCw size={28} className="spin" style={{ color: 'var(--cptm-red)', marginBottom: '0.5rem' }} />
-                <p style={{ fontWeight: 700, color: 'var(--cptm-gray)' }}>Carregando salas...</p>
-              </div>
-            ) : salas.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '2.5rem 1rem', color: 'var(--text-muted)' }}>
-                <p>Nenhuma sala cadastrada ainda. Crie sua primeira sala no formulário ao lado!</p>
-              </div>
-            ) : (
-              <div className="rooms-list">
-                {salas.map((sala) => (
-                  <div key={sala.id} className="room-item">
-                    <div className="room-item-details">
-                      <div className="room-code-tag">
-                        <code>{sala.codigo}</code>
-                        <button
-                          type="button"
-                          onClick={() => copiarCodigo(sala.codigo)}
-                          className="btn-copy"
-                          title="Copiar código"
-                        >
-                          <Copy size={16} />
-                          {copiado === sala.codigo && (
-                            <span style={{ marginLeft: '4px', fontSize: '0.75rem', color: '#10B981', fontWeight: 800 }}>
-                              Copiado!
-                            </span>
-                          )}
-                        </button>
-                      </div>
-                      <h4 style={{ fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
-                        {sala.nome}
-                      </h4>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                        Criada em {formatarData(sala.criadaEm)}
-                      </span>
-                    </div>
+            <button
+              type="button"
+              id="btn-abrir-modal-criar-sala"
+              onClick={() => setMostrarModalCriar(true)}
+              className="btn-cptm btn-cptm-primary btn-md btn-pulse"
+            >
+              <PlusCircle size={18} />
+              <span>Criar Nova Sala</span>
+            </button>
+          </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                      <div className="room-status-badge">
-                        {sala.ativa ? (
-                          <span className="badge-active">
-                            <CheckCircle size={14} /> Ativa
-                          </span>
-                        ) : (
-                          <span className="badge-inactive">
-                            <XCircle size={14} /> Inativa
-                          </span>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleAlternarStatus(sala.id)}
-                        className="btn btn-secondary btn-xs"
-                        title={sala.ativa ? 'Desativar sala' : 'Ativar sala'}
-                      >
-                        <Power size={14} />
-                        <span>{sala.ativa ? 'Desativar' : 'Ativar'}</span>
-                      </button>
+          <div className="rooms-admin-grid">
+            {carregandoSalas ? (
+              <p style={{ color: 'var(--text-muted)' }}>Carregando salas...</p>
+            ) : salas.length === 0 ? (
+              <p style={{ color: 'var(--text-muted)' }}>Nenhuma sala criada ainda. Clique em "Criar Nova Sala".</p>
+            ) : (
+              salas.map((sala) => (
+                <div key={sala.id} className="room-card-item">
+                  <div className="room-card-header">
+                    <span className="room-code-badge">{sala.codigo}</span>
+                    <button
+                      type="button"
+                      onClick={() => copiarCodigo(sala.codigo)}
+                      className="nav-link-subtle"
+                      title="Copiar Código"
+                    >
+                      <Copy size={16} />
+                    </button>
+                  </div>
+
+                  <div>
+                    <strong style={{ fontSize: '1.05rem', color: '#FFFFFF' }}>{sala.nome}</strong>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                      Status: {sala.ativa ? <span style={{ color: '#00CC74' }}>Ativa</span> : <span style={{ color: '#ED102B' }}>Inativa</span>}
                     </div>
                   </div>
-                ))}
-              </div>
+
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: 'auto' }}>
+                    <button
+                      type="button"
+                      onClick={() => abrirLobbyTelao(sala)}
+                      className="btn-cptm btn-cptm-gold btn-sm btn-block"
+                    >
+                      <Tv size={16} />
+                      <span>Abrir Telão</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAlternarStatus(sala.id)}
+                      className="btn-cptm btn-cptm-secondary btn-sm"
+                      title={sala.ativa ? 'Desativar sala' : 'Ativar sala'}
+                    >
+                      <Power size={16} />
+                    </button>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         </div>
       )}
 
-      {/* ==================================================== */}
-      {/* ABA 2: GESTÃO COMPLETA DE PERGUNTAS                 */}
-      {/* ==================================================== */}
+      {/* ABA 2: PERGUNTAS */}
       {abaAtiva === 'perguntas' && (
-        <div className="card questions-management-card">
-          <div className="questions-toolbar">
-            <div className="toolbar-left">
+        <div className="presenter-card-panel">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <button
                 type="button"
-                id="btn-nova-pergunta"
+                id="btn-nova-pergunta-admin"
                 onClick={abrirModalNovaPergunta}
-                className="btn btn-positive-action btn-md"
+                className="btn-cptm btn-cptm-primary btn-md"
               >
                 <PlusCircle size={18} />
                 <span>Nova Pergunta</span>
               </button>
 
-              <div className="filter-group">
-                <label htmlFor="selectFiltroNivel">Filtrar por Nível:</label>
-                <select
-                  id="selectFiltroNivel"
-                  value={filtroNivel}
-                  onChange={(e) => setFiltroNivel(e.target.value)}
-                  className="input-field select-field"
-                >
-                  <option value="todos">Todos os Níveis (1 a 10)</option>
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                    <option key={n} value={n}>
-                      Nível {n} ({formatarMoeda(VALORES_SUGERIDOS_POR_NIVEL[n])})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <select
+                value={filtroNivel}
+                onChange={(e) => setFiltroNivel(e.target.value)}
+                className="game-input"
+                style={{ width: 'auto', padding: '0.6rem 1rem' }}
+              >
+                <option value="todos">Todos os Níveis (1 a 10)</option>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                  <option key={n} value={n}>
+                    Nível {n} ({formatarMoeda(VALORES_SUGERIDOS_POR_NIVEL[n])})
+                  </option>
+                ))}
+              </select>
             </div>
 
             <button
               type="button"
               onClick={carregarPerguntas}
-              className="btn btn-secondary btn-xs"
-              title="Atualizar acervo de perguntas"
+              className="btn-cptm btn-cptm-secondary btn-sm"
             >
-              <RefreshCw size={14} className={carregandoPerguntas ? 'spin' : ''} />
+              <RefreshCw size={14} />
               <span>Atualizar</span>
             </button>
           </div>
 
-          {carregandoPerguntas ? (
-            <div style={{ textAlign: 'center', padding: '3rem 1rem' }}>
-              <RefreshCw size={32} className="spin" style={{ color: 'var(--cptm-red)', marginBottom: '0.75rem' }} />
-              <p style={{ fontWeight: 700, color: 'var(--cptm-gray)' }}>Carregando perguntas do acervo...</p>
-            </div>
-          ) : perguntasFiltradas.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)' }}>
-              <p>Nenhuma pergunta encontrada para o nível selecionado.</p>
-            </div>
-          ) : (
-            <div className="questions-grid-list">
-              {perguntasFiltradas.map((p) => (
-                <div key={p.id} className="question-admin-card">
-                  <div className="question-admin-header">
-                    <div className="q-badges">
-                      <span className="badge-nivel">Nível {p.nivelDificuldade}</span>
-                      <span className="badge-prize">{formatarMoeda(p.valorPremio)}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {perguntas
+              .filter((p) => (filtroNivel === 'todos' ? true : p.nivelDificuldade === parseInt(filtroNivel, 10)))
+              .map((p) => (
+                <div key={p.id} className="room-card-item" style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.35rem' }}>
+                      <span className="lobby-status-badge">Nível {p.nivelDificuldade}</span>
+                      <span className="hud-prize-badge" style={{ padding: '0.15rem 0.6rem', fontSize: '0.8rem' }}>
+                        {formatarMoeda(p.valorPremio)}
+                      </span>
                     </div>
-
-                    <div className="q-actions">
-                      <button
-                        type="button"
-                        onClick={() => abrirModalEditarPergunta(p)}
-                        className="btn-icon btn-edit"
-                        title="Editar pergunta"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleExcluirPergunta(p.id)}
-                        className="btn-icon btn-delete"
-                        title="Excluir pergunta"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
+                    <strong style={{ fontSize: '1.05rem', color: '#FFFFFF' }}>{p.enunciado}</strong>
                   </div>
 
-                  <h3 className="q-statement">{p.enunciado}</h3>
-
-                  <div className="q-alternatives-preview">
-                    {p.alternativas?.map((alt) => (
-                      <div
-                        key={alt.id || alt.numero}
-                        className={`alt-preview-item ${alt.correta ? 'is-correct' : ''}`}
-                      >
-                        <span className="alt-num">{alt.numero}</span>
-                        <span className="alt-text">{alt.texto}</span>
-                        {alt.correta && (
-                          <span className="alt-correct-tag">
-                            <Check size={12} /> Correta
-                          </span>
-                        )}
-                      </div>
-                    ))}
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={() => abrirModalEditarPergunta(p)}
+                      className="nav-link-subtle"
+                      title="Editar"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleExcluirPergunta(p.id)}
+                      className="nav-link-subtle"
+                      title="Excluir"
+                    >
+                      <Trash2 size={16} color="#ED102B" />
+                    </button>
                   </div>
-
-                  {p.explicacao && (
-                    <div className="q-explanation-box">
-                      <strong>Explicação Técnica:</strong> {p.explicacao}
-                    </div>
-                  )}
                 </div>
               ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ==================================================== */}
-      {/* MODAL DE CADASTRO / EDIÇÃO DE PERGUNTA               */}
-      {/* ==================================================== */}
-      {modalPerguntaAberto && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true">
-          <div className="modal-dialog card modal-dialog-lg">
-            <div className="modal-header">
-              <div className="modal-title-wrap">
-                <HelpCircle size={22} className="icon-question" />
-                <h3>{editandoId ? 'Editar Pergunta Oficial' : 'Cadastrar Nova Pergunta'}</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setModalPerguntaAberto(false)}
-                className="btn-close-modal"
-                aria-label="Fechar janela"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSalvarPergunta} className="modal-form-question">
-              <div className="form-row-2">
-                <div className="form-group">
-                  <label htmlFor="inputNivel">Nível da Rodada (1 a 10):</label>
-                  <select
-                    id="inputNivel"
-                    value={nivelDificuldade}
-                    onChange={(e) => handleNivelChange(e.target.value)}
-                    className="input-field"
-                    required
-                  >
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
-                      <option key={n} value={n}>
-                        Nível {n} ({formatarMoeda(VALORES_SUGERIDOS_POR_NIVEL[n])})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="inputPremio">Valor do Prêmio (R$):</label>
-                  <input
-                    id="inputPremio"
-                    type="number"
-                    min={100}
-                    max={1000000}
-                    step={100}
-                    value={valorPremio}
-                    onChange={(e) => setValorPremio(e.target.value)}
-                    className="input-field"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="inputEnunciado">Enunciado da Pergunta:</label>
-                <textarea
-                  id="inputEnunciado"
-                  rows={3}
-                  required
-                  placeholder="Ex: Qual é a cor que identifica a Linha 10 da CPTM?"
-                  value={enunciado}
-                  onChange={(e) => setEnunciado(e.target.value)}
-                  className="input-field textarea-field"
-                  maxLength={1000}
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="inputExplicacao">Explicação Técnica / Curiosidade (exibida no resultado):</label>
-                <textarea
-                  id="inputExplicacao"
-                  rows={2}
-                  placeholder="Ex: A Linha 10-Turquesa opera o eixo sudeste do transporte metropolitano..."
-                  value={explicacao}
-                  onChange={(e) => setExplicacao(e.target.value)}
-                  className="input-field textarea-field"
-                  maxLength={1000}
-                />
-              </div>
-
-              <div className="alternatives-form-box">
-                <label className="section-subtitle">
-                  4 Alternativas (Selecione a opção correta):
-                </label>
-
-                {[
-                  { num: 1, val: alternativa1, set: setAlternativa1 },
-                  { num: 2, val: alternativa2, set: setAlternativa2 },
-                  { num: 3, val: alternativa3, set: setAlternativa3 },
-                  { num: 4, val: alternativa4, set: setAlternativa4 },
-                ].map(({ num, val, set }) => (
-                  <div key={num} className={`alt-input-row ${corretaNumero === num ? 'selected-correct' : ''}`}>
-                    <label className="radio-label">
-                      <input
-                        type="radio"
-                        name="alternativaCorreta"
-                        checked={corretaNumero === num}
-                        onChange={() => setCorretaNumero(num)}
-                      />
-                      <span className="circle-num">{num}</span>
-                    </label>
-
-                    <input
-                      type="text"
-                      required
-                      placeholder={`Texto da Alternativa ${num}`}
-                      value={val}
-                      onChange={(e) => set(e.target.value)}
-                      className="input-field alt-text-input"
-                      maxLength={500}
-                    />
-
-                    {corretaNumero === num && (
-                      <span className="correct-indicator">
-                        <Check size={16} /> Correta
-                      </span>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              <div className="modal-footer-actions">
-                <button
-                  type="button"
-                  onClick={() => setModalPerguntaAberto(false)}
-                  className="btn btn-secondary btn-md"
-                >
-                  Cancelar
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={salvandoPergunta}
-                  className="btn btn-positive-action btn-lg"
-                >
-                  <Save size={18} />
-                  <span>{salvandoPergunta ? 'Salvando...' : editandoId ? 'Atualizar Pergunta' : 'Salvar no Acervo'}</span>
-                </button>
-              </div>
-            </form>
           </div>
         </div>
       )}
+
+      {/* MODAL: CRIAR NOVA SALA */}
+      <GameModal
+        isOpen={mostrarModalCriar}
+        onClose={() => setMostrarModalCriar(false)}
+        title="Criar Sala de Jogo"
+        icon={PlusCircle}
+        size="md"
+      >
+        <form onSubmit={handleCriarSala} className="enter-game-form">
+          <div className="game-form-group">
+            <label htmlFor="inputNomeSala" className="game-form-label">
+              Nome da Sala / Estação
+            </label>
+            <input
+              id="inputNomeSala"
+              type="text"
+              required
+              placeholder="Ex: Torneio Estação da Luz - Linha 11"
+              value={nomeSala}
+              onChange={(e) => setNomeSala(e.target.value)}
+              className="game-input"
+              minLength={3}
+              maxLength={80}
+              autoFocus
+            />
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.75rem' }}>
+            <button
+              type="button"
+              onClick={() => setMostrarModalCriar(false)}
+              className="btn-cptm btn-cptm-secondary btn-md"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={criandoSala}
+              className="btn-cptm btn-cptm-primary btn-md"
+            >
+              {criandoSala ? 'Gerando...' : 'Gerar Código e Abrir Telão'}
+            </button>
+          </div>
+        </form>
+      </GameModal>
+
+      {/* MODAL: EDITAR / CRIAR PERGUNTA */}
+      <GameModal
+        isOpen={modalPerguntaAberto}
+        onClose={() => setModalPerguntaAberto(false)}
+        title={editandoId ? 'Editar Pergunta Oficial' : 'Cadastrar Nova Pergunta'}
+        icon={HelpCircle}
+        size="lg"
+      >
+        <form onSubmit={handleSalvarPergunta} className="enter-game-form">
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="game-form-group">
+              <label htmlFor="formNivel" className="game-form-label">Nível (1 a 10)</label>
+              <select
+                id="formNivel"
+                value={nivelDificuldade}
+                onChange={(e) => {
+                  const n = parseInt(e.target.value, 10)
+                  setNivelDificuldade(n)
+                  setValorPremio(VALORES_SUGERIDOS_POR_NIVEL[n] || 1000)
+                }}
+                className="game-input"
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                  <option key={n} value={n}>Nível {n}</option>
+                ))}
+              </select>
+            </div>
+            <div className="game-form-group">
+              <label htmlFor="formPremio" className="game-form-label">Valor do Prêmio (R$)</label>
+              <input
+                id="formPremio"
+                type="number"
+                value={valorPremio}
+                onChange={(e) => setValorPremio(e.target.value)}
+                className="game-input"
+                required
+              />
+            </div>
+          </div>
+
+          <div className="game-form-group">
+            <label htmlFor="formEnunciado" className="game-form-label">Enunciado da Pergunta</label>
+            <textarea
+              id="formEnunciado"
+              rows={3}
+              value={enunciado}
+              onChange={(e) => setEnunciado(e.target.value)}
+              className="game-input"
+              placeholder="Digite o enunciado da pergunta..."
+              required
+            />
+          </div>
+
+          <div className="game-form-group">
+            <label className="game-form-label">4 Alternativas (Marque a Correta):</label>
+            {[
+              { num: 1, val: alternativa1, set: setAlternativa1, letra: 'A', cor: '#ED102B' },
+              { num: 2, val: alternativa2, set: setAlternativa2, letra: 'B', cor: '#0879F9' },
+              { num: 3, val: alternativa3, set: setAlternativa3, letra: 'C', cor: '#00CC74' },
+              { num: 4, val: alternativa4, set: setAlternativa4, letra: 'D', cor: '#FFB900' },
+            ].map(({ num, val, set, letra, cor }) => (
+              <div key={num} style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                <input
+                  type="radio"
+                  name="corretaNumero"
+                  checked={corretaNumero === num}
+                  onChange={() => setCorretaNumero(num)}
+                  style={{ width: 18, height: 18, accentColor: '#00CC74' }}
+                />
+                <span
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: 4,
+                    backgroundColor: cor,
+                    color: num === 4 ? '#050B17' : '#FFFFFF',
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 900,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.9rem',
+                    flexShrink: 0,
+                  }}
+                >
+                  {letra}
+                </span>
+                <input
+                  type="text"
+                  required
+                  placeholder={`Texto da alternativa ${letra}`}
+                  value={val}
+                  onChange={(e) => set(e.target.value)}
+                  className="game-input"
+                />
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+            <button
+              type="button"
+              onClick={() => setModalPerguntaAberto(false)}
+              className="btn-cptm btn-cptm-secondary btn-md"
+            >
+              Cancelar
+            </button>
+            <button
+              type="submit"
+              disabled={salvandoPergunta}
+              className="btn-cptm btn-cptm-primary btn-md"
+            >
+              <Save size={18} />
+              <span>{salvandoPergunta ? 'Salvando...' : 'Salvar Pergunta'}</span>
+            </button>
+          </div>
+        </form>
+      </GameModal>
     </div>
   )
 }

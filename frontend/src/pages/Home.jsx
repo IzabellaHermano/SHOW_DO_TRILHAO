@@ -1,58 +1,97 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { partidaService } from '../services/api'
-import { Play, LogIn, UserPlus, Trophy, LayoutDashboard, ArrowRight, ShieldAlert, Train, X } from 'lucide-react'
-import gameLogo from '../assets/logo.png'
-import apresentadorImg from '../assets/apresentador.png'
+import { partidaService, salaService } from '../services/api'
+import { useToast } from '../context/ToastContext'
+import { Play, Users, Train, ArrowRight, ShieldAlert, Sparkles } from 'lucide-react'
+import GameTitle from '../components/GameTitle'
+import MetroTimeline from '../components/MetroTimeline'
+import GameModal from '../components/GameModal'
+import CptmLogo from '../components/CptmLogo'
 
 export default function Home() {
   const navigate = useNavigate()
-  const { user, isAuthenticated } = useAuth()
+  const { user, isAuthenticated, isPresenter } = useAuth()
+  const toast = useToast()
 
-  const [mostrarModalSala, setMostrarModalSala] = useState(false)
+  // Modal "ENTRE NO JOGO" (Reproduz a Tela 4 da referência)
+  const [mostrarModalEntrar, setMostrarModalEntrar] = useState(false)
   const [codigoSala, setCodigoSala] = useState('')
-  const [nomeVisitante, setNomeVisitante] = useState('')
+  const [apelido, setApelido] = useState(user?.nome || '')
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
 
-  const handleAbrirSala = () => {
+  const handleAbrirEntrar = () => {
     setErro('')
-    setMostrarModalSala(true)
+    if (user?.nome) setApelido(user.nome)
+    setMostrarModalEntrar(true)
   }
 
-  const handleEntrarSala = async (e) => {
+  const handleCriarSala = () => {
+    if (isPresenter) {
+      navigate('/apresentador')
+    } else {
+      toast.info('Para criar uma sala oficial da CPTM, faça login com uma conta de Apresentador.', 'Acesso Restrito')
+      navigate('/login', { state: { roleDefault: 'ROLE_APRESENTADOR' } })
+    }
+  }
+
+  const handleEmbarcar = async (e) => {
     e.preventDefault()
     setErro('')
 
-    if (!codigoSala.trim()) {
-      setErro('Por favor, informe o código da sala de jogo (ex: CPTM-2026).')
+    const codLimpo = codigoSala.trim().toUpperCase()
+    if (!codLimpo) {
+      setErro('Informe o código da sala de jogo (ex: CPTM-X7K2).')
       return
     }
 
-    if (!isAuthenticated && (!nomeVisitante.trim() || nomeVisitante.trim().length < 2)) {
-      setErro('Visitantes precisam informar um apelido ou nome (mínimo 2 letras).')
+    if (!isAuthenticated && (!apelido.trim() || apelido.trim().length < 2)) {
+      setErro('Informe seu apelido para embarcar na partida (mínimo 2 caracteres).')
       return
     }
 
     setCarregando(true)
     try {
-      if (isAuthenticated) {
-        const partida = await partidaService.iniciarJogador(codigoSala.trim().toUpperCase())
-        navigate(`/jogo/${partida.id}`)
-      } else {
-        const partida = await partidaService.iniciarVisitante(
-          codigoSala.trim().toUpperCase(),
-          nomeVisitante.trim()
-        )
-        navigate(`/jogo/${partida.id}`)
+      // 1. Verifica se a sala existe e está ativa
+      try {
+        const infoSala = await salaService.verificarSala(codLimpo)
+        if (!infoSala.ativa) {
+          setErro(`A sala ${codLimpo} está desativada no momento pelo apresentador.`)
+          setCarregando(false)
+          return
+        }
+      } catch (errCheck) {
+        console.warn('Verificação de sala:', errCheck)
+        // Se a verificação falhar com 404, avisa imediatamente
+        if (errCheck.response?.status === 404) {
+          setErro(`A sala ${codLimpo} não foi encontrada. Confira as letras e números.`)
+          setCarregando(false)
+          return
+        }
       }
+
+      // 2. Inicia a partida como Jogador autenticado ou Visitante
+      let partidaCriada = null
+      if (isAuthenticated) {
+        partidaCriada = await partidaService.iniciarJogador(codLimpo)
+      } else {
+        partidaCriada = await partidaService.iniciarVisitante(codLimpo, apelido.trim())
+      }
+
+      toast.success('Embarque confirmado! Você entrou no Show.', 'Tudo Pronto')
+      navigate(`/jogo/${partidaCriada.id}`, {
+        state: {
+          codigoSala: codLimpo,
+          nomeJogador: apelido.trim(),
+        },
+      })
     } catch (err) {
-      console.error('Erro ao conectar à sala:', err)
+      console.error('Erro ao embarcar:', err)
       const msg =
         err.response?.data?.message ||
         err.response?.data?.mensagem ||
-        'Não foi possível conectar à sala. Verifique se o código está correto e ativo.'
+        'Não foi possível embarcar na sala. Confira o código e tente novamente.'
       setErro(msg)
     } finally {
       setCarregando(false)
@@ -60,200 +99,135 @@ export default function Home() {
   }
 
   return (
-    <div className="menu-wireframe-container">
-      {/* Container Central do Menu do Show */}
-      <div className="menu-card-main">
-        {/* Logo Central de Destaque */}
-        <div className="menu-logo-wrapper">
-          <img
-            src={gameLogo}
-            alt="Show do Trilhão - CPTM"
-            className="menu-main-logo"
-          />
+    <div className="home-hero-stage">
+      {/* Luz e ambientação central */}
+      <div className="home-ambient-glow" aria-hidden="true" />
+
+      {/* Conteúdo Central do Palco */}
+      <div className="home-center-content">
+        {/* Logotipo 3D Oficial do Show do Trilhão */}
+        <GameTitle
+          size="lg"
+          subtitle="Conhecimento nos trilhos. Quem chega ao trilhão?"
+        />
+
+        {/* Pilha de Botões de Ação Principal */}
+        <div className="home-actions-group">
+          {/* Botão 1 Primário: ENTRAR NO JOGO */}
+          <button
+            type="button"
+            id="btn-entrar-no-jogo"
+            onClick={handleAbrirEntrar}
+            className="btn-cptm btn-cptm-primary btn-xl btn-pulse"
+          >
+            <Play size={24} fill="currentColor" />
+            <span>Entrar no Jogo</span>
+          </button>
+
+          {/* Botão 2 Secundário: CRIAR SALA */}
+          <button
+            type="button"
+            id="btn-criar-sala"
+            onClick={handleCriarSala}
+            className="btn-cptm btn-cptm-secondary btn-lg"
+          >
+            <Users size={20} />
+            <span>Criar Sala</span>
+          </button>
         </div>
 
-        <p className="menu-tagline">
-          O Game Show do Transporte sobre Trilhos de São Paulo
-        </p>
-
-        {/* Apresentador Discreto na Boas-Vindas */}
-        <div className="menu-host-badge">
-          <img
-            src={apresentadorImg}
-            alt="Silvio dos Trilhos"
-            className="menu-host-avatar"
-          />
-          <span>Comandado por <strong>Silvio dos Trilhos</strong> • Rumo a 1 Milhão!</span>
-        </div>
-
-        {/* Informação do Jogador Logado (se houver) */}
+        {/* Status discreto se o usuário já estiver logado */}
         {isAuthenticated && (
-          <div className="menu-user-status">
-            <span>Passageiro conectado: <strong>{user?.nome}</strong> ({user?.role === 'ROLE_APRESENTADOR' ? 'Apresentador' : user?.role === 'ROLE_ADMIN' ? 'Administrador' : 'Jogador Oficial'})</span>
+          <div className="home-logged-badge">
+            <Sparkles size={14} className="gold-icon" />
+            <span>Conectado como <strong>{user?.nome}</strong></span>
           </div>
         )}
-
-        {/* AÇÕES PRINCIPAIS DO MENU */}
-        <div className="menu-actions-stack">
-          {/* Botão Primário de Destaque */}
-          <button
-            type="button"
-            id="btn-iniciar-partida"
-            onClick={handleAbrirSala}
-            className="btn btn-primary-show btn-pulse"
-          >
-            <Play size={24} className="icon-play" />
-            <span>Iniciar Partida / Entrar com Código de Sala</span>
-          </button>
-
-          {/* Botões Secundários: Entrar e Criar Conta */}
-          <div className="menu-secondary-buttons">
-            {!isAuthenticated ? (
-              <>
-                <button
-                  type="button"
-                  id="btn-entrar"
-                  onClick={() => navigate('/login', { state: { register: false } })}
-                  className="btn btn-secondary-show"
-                >
-                  <LogIn size={18} />
-                  <span>Entrar</span>
-                </button>
-
-                <button
-                  type="button"
-                  id="btn-criar-conta"
-                  onClick={() => navigate('/login', { state: { register: true } })}
-                  className="btn btn-secondary-show"
-                >
-                  <UserPlus size={18} />
-                  <span>Criar Conta</span>
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() => navigate('/login')}
-                className="btn btn-secondary-show"
-              >
-                <span>Alternar Conta</span>
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* SEÇÃO INFERIOR: LINKS SEPARADOS */}
-        <div className="menu-links-separated">
-          <button
-            type="button"
-            id="link-ranking-geral"
-            onClick={() => navigate('/ranking')}
-            className="menu-link-item"
-          >
-            <Trophy size={18} className="link-icon gold-icon" />
-            <span>Ranking Geral</span>
-          </button>
-
-          <span className="menu-links-divider" aria-hidden="true">•</span>
-
-          <button
-            type="button"
-            id="link-painel-apresentador"
-            onClick={() => navigate('/apresentador')}
-            className="menu-link-item"
-          >
-            <LayoutDashboard size={18} className="link-icon" />
-            <span>Painel do Apresentador / Admin</span>
-          </button>
-        </div>
       </div>
 
-      {/* MODAL / TELA DE ENTRAR COM CÓDIGO DE SALA */}
-      {mostrarModalSala && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true">
-          <div className="modal-dialog card">
-            <div className="modal-header">
-              <div className="modal-title-wrap">
-                <Train size={24} className="icon-train" />
-                <h3>Entrar com Código de Sala</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setMostrarModalSala(false)}
-                className="btn-close-modal"
-                aria-label="Fechar janela"
-              >
-                <X size={20} />
-              </button>
+      {/* Linha Férrea com Estações no Rodapé (Panel 1) */}
+      <div className="home-bottom-tracks">
+        <MetroTimeline
+          total={10}
+          current={2}
+          showLabel={false}
+          variant="ambient"
+        />
+      </div>
+
+      {/* MODAL: TELA 04 — ENTRAR NO JOGO (MOBILE / MODAL FIDELIDADE) */}
+      <GameModal
+        isOpen={mostrarModalEntrar}
+        onClose={() => setMostrarModalEntrar(false)}
+        title="Entre no Jogo"
+        icon={Train}
+        size="md"
+      >
+        <div className="enter-game-card-content">
+          <div className="enter-game-branding">
+            <CptmLogo size="md" />
+            <span className="enter-game-subbrand">SHOW DO TRILHÃO</span>
+          </div>
+
+          <h3 className="enter-game-title">Entre no Jogo</h3>
+          <p className="enter-game-desc">
+            Informe o código gerado no painel da estação e seu apelido para embarcar na partida.
+          </p>
+
+          {erro && (
+            <div className="game-alert game-alert-danger" role="alert">
+              <ShieldAlert size={18} style={{ flexShrink: 0 }} />
+              <span>{erro}</span>
+            </div>
+          )}
+
+          <form onSubmit={handleEmbarcar} className="enter-game-form">
+            <div className="game-form-group">
+              <label htmlFor="codigoSala" className="game-form-label">
+                Código da Sala
+              </label>
+              <input
+                id="codigoSala"
+                type="text"
+                required
+                placeholder="Ex: CPTM-X7K2"
+                value={codigoSala}
+                onChange={(e) => setCodigoSala(e.target.value.toUpperCase())}
+                className="game-input game-input-uppercase"
+                maxLength={20}
+                autoFocus
+              />
             </div>
 
-            <p className="modal-desc">
-              Digite o código da sala fornecido pelo seu mestre de sala ou apresentador para iniciar sua jornada nos trilhos.
-            </p>
+            <div className="game-form-group">
+              <label htmlFor="apelido" className="game-form-label">
+                Seu Apelido
+              </label>
+              <input
+                id="apelido"
+                type="text"
+                required
+                placeholder="Ex: Carlos, Ana, Ferroviário..."
+                value={apelido}
+                onChange={(e) => setApelido(e.target.value)}
+                className="game-input"
+                maxLength={30}
+              />
+            </div>
 
-            {erro && (
-              <div className="alert alert-danger" role="alert">
-                <ShieldAlert size={18} />
-                <span>{erro}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleEntrarSala} className="modal-form">
-              <div className="form-group">
-                <label htmlFor="inputCodigoSala">Código da Sala:</label>
-                <input
-                  id="inputCodigoSala"
-                  type="text"
-                  required
-                  placeholder="Ex: CPTM-2026"
-                  value={codigoSala}
-                  onChange={(e) => setCodigoSala(e.target.value.toUpperCase())}
-                  className="input-field uppercase-input"
-                  maxLength={20}
-                  autoFocus
-                />
-              </div>
-
-              {!isAuthenticated && (
-                <div className="form-group">
-                  <label htmlFor="inputNomeVisitante">Seu Nome / Apelido de Visitante:</label>
-                  <input
-                    id="inputNomeVisitante"
-                    type="text"
-                    required
-                    placeholder="Como deseja ser chamado no ranking da sala?"
-                    value={nomeVisitante}
-                    onChange={(e) => setNomeVisitante(e.target.value)}
-                    className="input-field"
-                    maxLength={35}
-                  />
-                  <small className="form-help">
-                    Visitantes disputam o ranking da sala. Para disputar o ranking geral de milionários da CPTM, faça login.
-                  </small>
-                </div>
-              )}
-
-              <div className="modal-footer-actions">
-                <button
-                  type="button"
-                  onClick={() => setMostrarModalSala(false)}
-                  className="btn btn-secondary btn-md"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={carregando}
-                  className="btn btn-positive-action btn-lg"
-                >
-                  <span>{carregando ? 'Conectando...' : 'Entrar no Jogo'}</span>
-                  <ArrowRight size={18} />
-                </button>
-              </div>
-            </form>
-          </div>
+            <button
+              type="submit"
+              id="btn-embarcar"
+              disabled={carregando}
+              className="btn-cptm btn-cptm-primary btn-xl btn-block"
+              style={{ marginTop: '0.75rem' }}
+            >
+              <Train size={22} />
+              <span>{carregando ? 'Embarcando...' : 'Embarcar'}</span>
+            </button>
+          </form>
         </div>
-      )}
+      </GameModal>
     </div>
   )
 }

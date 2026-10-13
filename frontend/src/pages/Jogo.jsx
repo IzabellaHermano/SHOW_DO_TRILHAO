@@ -1,54 +1,88 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { partidaService } from '../services/api'
+import { partidaService, rankingService } from '../services/api'
+import { useToast } from '../context/ToastContext'
 import confetti from 'canvas-confetti'
-import { Clock, AlertTriangle, ArrowRight, RotateCcw, Trophy, LogOut, CheckCircle2 } from 'lucide-react'
-import apresentadorImg from '../assets/apresentador.png'
-import gameLogo from '../assets/logo.png'
+import {
+  Train,
+  Check,
+  CheckCircle2,
+  Lock,
+  RotateCcw,
+  Trophy,
+  LogOut,
+  AlertTriangle,
+  ArrowRight,
+  TrendingUp,
+  Flame,
+  Users
+} from 'lucide-react'
+import CptmLogo from '../components/CptmLogo'
+import GameTitle from '../components/GameTitle'
+import CircularTimer from '../components/CircularTimer'
+import MetroTimeline from '../components/MetroTimeline'
+import GameModal from '../components/GameModal'
+import Podium from '../components/Podium'
 
 export default function Jogo() {
   const { id } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth()
+  const toast = useToast()
 
-  // Estados da Partida
+  // Estados Base da Partida
   const [partidaId, setPartidaId] = useState(id || null)
   const [partidaInfo, setPartidaInfo] = useState(null)
   const [pergunta, setPergunta] = useState(null)
   const [carregando, setCarregando] = useState(true)
   const [erroInicial, setErroInicial] = useState('')
 
-  // Estados de Gameplay
+  // Estados de Fluxo das Telas (Painéis 3, 5, 6, 7, 8, 9, 10, 11)
+  const [faseTela, setFaseTela] = useState('lobby_jogador') // 'lobby_jogador' | 'pergunta' | 'travada' | 'reveal' | 'transicao' | 'fim'
   const [selecionada, setSelecionada] = useState(null)
-  const [confirmado, setConfirmado] = useState(false)
-  const [enviandoResposta, setEnviandoResposta] = useState(false)
   const [tempoRestante, setTempoRestante] = useState(45)
+  const [enviandoResposta, setEnviandoResposta] = useState(false)
   const [respostaFeedback, setRespostaFeedback] = useState(null)
   const [proximaPerguntaPendente, setProximaPerguntaPendente] = useState(null)
   const [premioAcumulado, setPremioAcumulado] = useState(0)
+
+  // Gamificação & Estatísticas
+  const [sequenciaAcertos, setSequenciaAcertos] = useState(0)
+  const [posicaoDelta, setPosicaoDelta] = useState(1)
+  const [participantesRespondidos, setParticipantesRespondidos] = useState(1)
+  const [totalParticipantes, setTotalParticipantes] = useState(1)
+  const [rankingSala, setRankingSala] = useState([])
 
   // Modal de Abandono
   const [mostrarModalAbandono, setMostrarModalAbandono] = useState(false)
   const [abandonando, setAbandonando] = useState(false)
 
-  // Estados de Fim de Jogo
+  // Fim de Jogo
   const [fimDeJogo, setFimDeJogo] = useState(null) // 'vitoria' | 'derrota' | null
   const [acertosFinais, setAcertosFinais] = useState(0)
   const [motivoDerrota, setMotivoDerrota] = useState('')
 
-  // Intervalo de Confetes contínuos na tela de vitória
   const confettiIntervalRef = useRef(null)
 
-  const dispararConfetes = useCallback((count = 100) => {
+  const dispararConfetes = useCallback((count = 120) => {
     confetti({
       particleCount: count,
       spread: 90,
       origin: { y: 0.6 },
-      colors: ['#F5B800', '#FFFFFF', '#E2001A', '#0047AB', '#00A859'],
+      colors: ['#FFC629', '#ED102B', '#0879F9', '#00CC74', '#FFFFFF'],
     })
   }, [])
+
+  // Formatação de Moeda
+  const formatarMoeda = (valor) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+      maximumFractionDigits: 0,
+    }).format(valor || 0)
+  }
 
   // Inicialização da Partida
   useEffect(() => {
@@ -61,6 +95,7 @@ export default function Jogo() {
       try {
         let currentId = id
 
+        // Se veio redirecionado com código de sala pelo state
         if (!currentId && location.state?.codigoSala) {
           const codigo = location.state.codigoSala
           const nome = location.state.nomeJogador || 'Passageiro'
@@ -75,7 +110,7 @@ export default function Jogo() {
           if (partidaCriada && partidaCriada.id) {
             currentId = partidaCriada.id
             setPartidaId(currentId)
-            navigate(`/jogo/${currentId}`, { replace: true })
+            navigate(`/jogo/${currentId}`, { replace: true, state: location.state })
           }
         }
 
@@ -91,16 +126,39 @@ export default function Jogo() {
         setPartidaInfo(status)
         setPremioAcumulado(status.pontuacaoFinal || 0)
 
+        // Carrega dados de ranking da sala para o pódio e top 5
+        if (status.codigoSala) {
+          try {
+            const ranking = await rankingService.obterRankingSala(status.codigoSala)
+            if (ranking && ranking.length) {
+              setRankingSala(ranking)
+              setTotalParticipantes(Math.max(ranking.length, 1))
+            }
+          } catch (eRank) {
+            console.warn('Ranking de sala:', eRank)
+          }
+        }
+
         if (status.status === 'VITORIA') {
           setFimDeJogo('vitoria')
           setAcertosFinais(10)
+          setFaseTela('fim')
         } else if (status.status === 'ELIMINADO' || status.status === 'ABANDONADA') {
           setFimDeJogo('derrota')
           setAcertosFinais(status.nivelAlcancado || 0)
-          setMotivoDerrota(status.status === 'ABANDONADA' ? 'Você abandonou a partida.' : 'Não foi dessa vez, você errou')
+          setMotivoDerrota(status.status === 'ABANDONADA' ? 'Você abandonou a partida.' : 'Não foi dessa vez, você errou.')
+          setFaseTela('fim')
         } else if (status.perguntaAtual) {
           setPergunta(status.perguntaAtual)
           setTempoRestante(45)
+          // Se o usuário veio pelo fluxo de entrada, exibe brevemente o Lobby do Jogador (Panel 3)
+          // antes de abrir a pergunta, garantindo a visualização da tela de confirmação
+          if (location.state?.codigoSala && !sessionStorage.getItem(`lobby_visto_${currentId}`)) {
+            sessionStorage.setItem(`lobby_visto_${currentId}`, 'true')
+            setFaseTela('lobby_jogador')
+          } else {
+            setFaseTela('pergunta')
+          }
         } else {
           setErroInicial('Não foi possível carregar a pergunta atual desta partida.')
         }
@@ -121,10 +179,9 @@ export default function Jogo() {
     }
   }, [id, isAuthenticated, location.state, navigate])
 
-  // Trata tempo esgotado (45s) -> Errou perde tudo
+  // Trata tempo esgotado (45 segundos)
   const handleTempoEsgotado = useCallback(async () => {
-    if (confirmado || enviandoResposta || fimDeJogo || !pergunta) return
-    setConfirmado(true)
+    if (faseTela !== 'pergunta' || enviandoResposta || fimDeJogo || !pergunta) return
     setEnviandoResposta(true)
 
     try {
@@ -137,23 +194,26 @@ export default function Jogo() {
       setRespostaFeedback(resp)
       setAcertosFinais(resp.nivelAlcancado || 0)
       setPremioAcumulado(0)
-      setMotivoDerrota('Tempo esgotado! Nos trilhos da CPTM, a pontualidade é regra.')
+      setMotivoDerrota('Tempo esgotado! Nos trilhos da CPTM, a pontualidade é essencial.')
 
+      setFaseTela('reveal')
       setTimeout(() => {
         setFimDeJogo('derrota')
-      }, 2000)
+        setFaseTela('fim')
+      }, 3500)
     } catch (err) {
       console.error('Erro ao registrar tempo esgotado:', err)
       setPremioAcumulado(0)
       setFimDeJogo('derrota')
+      setFaseTela('fim')
     } finally {
       setEnviandoResposta(false)
     }
-  }, [confirmado, enviandoResposta, fimDeJogo, partidaId, pergunta])
+  }, [faseTela, enviandoResposta, fimDeJogo, partidaId, pergunta])
 
   // Cronômetro Regressivo de 45 segundos
   useEffect(() => {
-    if (confirmado || fimDeJogo || carregando || tempoRestante <= 0 || mostrarModalAbandono) return
+    if (faseTela !== 'pergunta' || carregando || tempoRestante <= 0 || mostrarModalAbandono) return
 
     const timer = setInterval(() => {
       setTempoRestante((prev) => {
@@ -167,17 +227,16 @@ export default function Jogo() {
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [confirmado, fimDeJogo, carregando, tempoRestante, mostrarModalAbandono, handleTempoEsgotado])
+  }, [faseTela, carregando, tempoRestante, mostrarModalAbandono, handleTempoEsgotado])
 
   // Chuva de confetes na tela de vitória
   useEffect(() => {
     if (fimDeJogo === 'vitoria') {
-      dispararConfetes(160)
+      dispararConfetes(180)
       confettiIntervalRef.current = setInterval(() => {
         dispararConfetes(60)
-      }, 2500)
+      }, 3000)
     }
-
     return () => {
       if (confettiIntervalRef.current) {
         clearInterval(confettiIntervalRef.current)
@@ -186,10 +245,10 @@ export default function Jogo() {
     }
   }, [fimDeJogo, dispararConfetes])
 
-  // Envio de Resposta
-  const handleConfirmarResposta = async () => {
-    if (!selecionada || confirmado || enviandoResposta || !pergunta) return
-    setConfirmado(true)
+  // Ação de Travar Resposta (Painel 7 -> Painel 8 -> Painel 9)
+  const handleTravarResposta = async () => {
+    if (!selecionada || enviandoResposta || !pergunta) return
+    setFaseTela('travada')
     setEnviandoResposta(true)
 
     try {
@@ -201,50 +260,65 @@ export default function Jogo() {
 
       setRespostaFeedback(resp)
 
-      if (resp.acertou) {
-        dispararConfetes(90)
-        setPremioAcumulado(resp.pontuacaoAtual || pergunta.valorPremio)
+      // Breve pausa dramática com cadeado (Painel 8: Resposta Travada)
+      setTimeout(() => {
+        setFaseTela('reveal')
 
-        if (resp.statusPartida === 'VITORIA') {
-          setAcertosFinais(10)
-          setPremioAcumulado(1000000)
-          setTimeout(() => {
-            setFimDeJogo('vitoria')
-          }, 1600)
+        if (resp.acertou) {
+          dispararConfetes(90)
+          setSequenciaAcertos((s) => s + 1)
+          setPosicaoDelta((p) => Math.min(p + 1, 3))
+          setPremioAcumulado(resp.pontuacaoAtual || pergunta.valorPremio)
+
+          if (resp.statusPartida === 'VITORIA') {
+            setAcertosFinais(10)
+            setPremioAcumulado(1000000)
+            setTimeout(() => {
+              setFimDeJogo('vitoria')
+              setFaseTela('fim')
+            }, 3000)
+          } else {
+            setProximaPerguntaPendente(resp.proximaPergunta)
+          }
         } else {
-          setProximaPerguntaPendente(resp.proximaPergunta)
+          setSequenciaAcertos(0)
+          setAcertosFinais(resp.nivelAlcancado || 0)
+          setPremioAcumulado(0)
+          setMotivoDerrota('Não foi dessa vez, você errou.')
+          setTimeout(() => {
+            setFimDeJogo('derrota')
+            setFaseTela('fim')
+          }, 3500)
         }
-      } else {
-        // Errou = perde tudo (R$ 0)
-        setAcertosFinais(resp.nivelAlcancado || 0)
-        setPremioAcumulado(0)
-        setMotivoDerrota('Não foi dessa vez, você errou')
-        setTimeout(() => {
-          setFimDeJogo('derrota')
-        }, 2200)
-      }
+      }, 1400)
     } catch (err) {
       console.error('Erro ao responder pergunta:', err)
       const msg = err.response?.data?.mensagem || 'Erro ao processar resposta no servidor.'
-      alert(msg)
-      setConfirmado(false)
+      toast.error(msg, 'Erro na Estação')
+      setFaseTela('pergunta')
     } finally {
       setEnviandoResposta(false)
     }
   }
 
-  // Avançar para próxima pergunta
+  // Avançar para Próxima Pergunta com Transição (Painel 10)
   const handleAvancarProxima = () => {
     if (!proximaPerguntaPendente) return
-    setPergunta(proximaPerguntaPendente)
-    setProximaPerguntaPendente(null)
-    setSelecionada(null)
-    setConfirmado(false)
-    setRespostaFeedback(null)
-    setTempoRestante(45)
+
+    // Ativa Tela 10 (Transição com tunel iluminado)
+    setFaseTela('transicao')
+
+    setTimeout(() => {
+      setPergunta(proximaPerguntaPendente)
+      setProximaPerguntaPendente(null)
+      setSelecionada(null)
+      setRespostaFeedback(null)
+      setTempoRestante(45)
+      setFaseTela('pergunta')
+    }, 2000)
   }
 
-  // Ação de Abandonar Partida (perde o prêmio acumulado = R$ 0)
+  // Abandonar Partida
   const handleConfirmarAbandono = async () => {
     setAbandonando(true)
     try {
@@ -253,372 +327,475 @@ export default function Jogo() {
       setPremioAcumulado(0)
       setMotivoDerrota('Você abandonou a partida e perdeu todo o prêmio acumulado.')
       setFimDeJogo('derrota')
+      setFaseTela('fim')
     } catch (err) {
       console.error('Erro ao abandonar partida:', err)
-      alert('Não foi possível abandonar a partida.')
+      toast.error('Não foi possível abandonar a partida.', 'Aviso')
     } finally {
       setAbandonando(false)
     }
   }
 
-  const formatarMoeda = (valor) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      maximumFractionDigits: 0,
-    }).format(valor || 0)
+  // Letra correspondente à alternativa (A, B, C, D)
+  const getLetraAlternativa = (numero) => {
+    const letras = ['A', 'B', 'C', 'D']
+    return letras[numero - 1] || 'A'
+  }
+
+  const getClasseCorAlternativa = (numero) => {
+    const classes = ['option-btn-a', 'option-btn-b', 'option-btn-c', 'option-btn-d']
+    return classes[numero - 1] || 'option-btn-a'
   }
 
   // ========================================================
-  // TELA DE VITÓRIA (ACERTOU AS 10 PERGUNTAS)
+  // ESTADO DE CARREGAMENTO & ERRO INICIAL
   // ========================================================
-  if (fimDeJogo === 'vitoria') {
-    return (
-      <div className="victory-fullscreen-wrapper">
-        {/* Balões Dourados Subindo Pela Tela */}
-        <div className="balloons-floating-area" aria-hidden="true">
-          <div className="balloon-gold b1" />
-          <div className="balloon-gold b2" />
-          <div className="balloon-gold b3" />
-          <div className="balloon-gold b4" />
-          <div className="balloon-gold b5" />
-          <div className="balloon-gold b6" />
-          <div className="balloon-gold b7" />
-        </div>
-
-        <div className="victory-container-content">
-          {/* Logo Grande do Show */}
-          <div className="victory-logo-box">
-            <img src={gameLogo} alt="Show do Trilhão" className="victory-logo-img" />
-          </div>
-
-          {/* Foto do Apresentador Oficial */}
-          <div className="victory-host-box">
-            <img src={apresentadorImg} alt="Silvio dos Trilhos" className="victory-host-photo" />
-          </div>
-
-          {/* Mensagem Obrigatória do Show */}
-          <h1 className="victory-message-text">
-            Vocês ganharam 1 Milhão de oportunidades para conhecer e explorar a ferrovia
-          </h1>
-
-          {/* 1000000 Grande, Dourado e Pulsando */}
-          <div className="victory-gold-number pulse-gold" aria-label="1000000">
-            1.000.000
-          </div>
-
-          <p className="victory-award-sub">
-            Parabéns, novo milionário dos trilhos paulistas! Você dominou todas as 10 estações da CPTM com maestria absoluta!
-          </p>
-
-          <div className="victory-buttons-row">
-            <button
-              type="button"
-              onClick={() => navigate('/')}
-              className="btn btn-positive-action btn-lg"
-            >
-              <RotateCcw size={20} />
-              <span>Jogar Novamente</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigate('/ranking')}
-              className="btn btn-show-light btn-lg"
-            >
-              <Trophy size={20} />
-              <span>Ver Ranking Oficial</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // ========================================================
-  // TELA DE ERRO / DERROTA (ERROU OU ABANDONOU = PERDE TUDO)
-  // ========================================================
-  if (fimDeJogo === 'derrota') {
-    return (
-      <div className="defeat-fullscreen-wrapper">
-        <div className="defeat-card-box">
-          <div className="defeat-icon-circle">
-            <AlertTriangle size={56} className="defeat-alert-icon" />
-          </div>
-
-          <h1 className="defeat-heading">
-            {motivoDerrota || 'Não foi dessa vez, você errou'}
-          </h1>
-
-          <div className="defeat-summary-box">
-            <div className="summary-field">
-              <span className="summary-label">Perguntas Acertadas:</span>
-              <span className="summary-value">{acertosFinais} de 10</span>
-            </div>
-            <div className="summary-field">
-              <span className="summary-label">Prêmio Final Conquistado:</span>
-              <span className="summary-value zero-prize">R$ 0</span>
-            </div>
-          </div>
-
-          {respostaFeedback && respostaFeedback.textoCorreta && (
-            <div className="defeat-explanation-card">
-              <p className="defeat-gabarito">
-                Gabarito oficial: alternativa <strong>{respostaFeedback.corretaNumero}</strong>: "{respostaFeedback.textoCorreta}"
-              </p>
-              {respostaFeedback.explicacao && (
-                <p className="defeat-exp-text">{respostaFeedback.explicacao}</p>
-              )}
-            </div>
-          )}
-
-          <p className="defeat-encouragement">
-            Nos trilhos da vida e da ferrovia, cada parada é uma chance de aprender. Volte à plataforma e tente de novo!
-          </p>
-
-          <div className="defeat-actions-row">
-            <button
-              type="button"
-              onClick={() => navigate('/')}
-              className="btn btn-positive-action btn-lg"
-            >
-              <RotateCcw size={20} />
-              <span>Tentar Novamente</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => navigate('/ranking')}
-              className="btn btn-secondary-show btn-lg"
-            >
-              <Trophy size={20} />
-              <span>Ver Ranking</span>
-            </button>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // Carregamento Inicial
   if (carregando) {
     return (
-      <div className="game-loading-stage">
-        <div className="game-loading-card">
-          <div className="loading-spinner-cptm" />
-          <h2>Aguarde, estamos preparando seu trem...</h2>
-          <p>Sorteando perguntas oficiais e calibrando o cronômetro da rodada.</p>
+      <div className="home-hero-stage">
+        <div className="player-lobby-card-box">
+          <div className="player-train-badge">
+            <Train size={42} />
+          </div>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800 }}>
+            Preparando seu trem para a viagem...
+          </h2>
+          <p style={{ color: 'var(--text-muted)' }}>Calibrando cronômetro e sorteando perguntas oficiais.</p>
         </div>
       </div>
     )
   }
 
-  // Erro Inicial
   if (erroInicial) {
     return (
-      <div className="game-loading-stage">
-        <div className="game-loading-card">
-          <AlertTriangle size={48} style={{ color: '#E2001A', margin: '0 auto 1rem auto' }} />
-          <h2>Aviso dos Trilhos</h2>
-          <p>{erroInicial}</p>
-          <button type="button" onClick={() => navigate('/')} className="btn btn-positive-action btn-md" style={{ marginTop: '1.5rem' }}>
-            <span>Voltar ao Menu Principal</span>
+      <div className="home-hero-stage">
+        <div className="player-lobby-card-box" style={{ maxWidth: 480 }}>
+          <AlertTriangle size={54} color="#ED102B" />
+          <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800 }}>Aviso da Estação</h2>
+          <p style={{ color: 'var(--text-muted)' }}>{erroInicial}</p>
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="btn-cptm btn-cptm-primary btn-lg"
+            style={{ marginTop: '1rem' }}
+          >
+            Voltar ao Menu Principal
           </button>
         </div>
       </div>
     )
   }
 
-  if (!pergunta) return null
-
-  const nivelAtual = pergunta.nivelDificuldade || (partidaInfo?.perguntaAtualIndex != null ? partidaInfo.perguntaAtualIndex + 1 : 1)
+  const nivelAtual =
+    pergunta?.nivelDificuldade ||
+    (partidaInfo?.perguntaAtualIndex != null ? partidaInfo.perguntaAtualIndex + 1 : 1)
+  const nomeExibicao =
+    partidaInfo?.nomeJogador || location.state?.nomeJogador || user?.nome || 'Passageiro'
 
   // ========================================================
-  // TELA DE GAMEPLAY (QUIZ SHOW EM ANDAMENTO)
+  // TELA 03 — LOBBY DO JOGADOR (MOBILE - PAINEL 3)
+  // ========================================================
+  if (faseTela === 'lobby_jogador') {
+    return (
+      <div className="player-lobby-mobile">
+        <div className="player-lobby-header">
+          <CptmLogo size="md" />
+          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+            SHOW DO TRILHÃO
+          </span>
+        </div>
+
+        <div className="player-lobby-card-box">
+          <div className="player-train-badge" aria-hidden="true">
+            <Train size={44} />
+          </div>
+
+          <h1 className="player-lobby-title">Você está no Jogo</h1>
+
+          <div className="player-name-chip-big">
+            {nomeExibicao}
+          </div>
+
+          <div className="player-confirmed-tag">
+            <CheckCircle2 size={20} />
+            <span>Embarque confirmado!</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setFaseTela('pergunta')}
+            className="btn-cptm btn-cptm-primary btn-lg btn-pulse"
+            style={{ width: '100%', maxWidth: '300px', marginTop: '0.5rem' }}
+          >
+            <ArrowRight size={20} />
+            <span>Iniciar Rodada</span>
+          </button>
+        </div>
+
+        <div className="player-lobby-footer">
+          <MetroTimeline total={10} current={1} showLabel={false} />
+          <p className="player-waiting-text">
+            Aguardando o apresentador iniciar o show...
+          </p>
+        </div>
+      </div>
+    )
+  }
+
+  // ========================================================
+  // TELA 08 — RESPOSTA TRAVADA (PAINEL 8)
+  // ========================================================
+  if (faseTela === 'travada') {
+    return (
+      <div className="locked-screen-mobile">
+        <div className="player-lobby-header">
+          <CptmLogo size="md" />
+        </div>
+
+        <div className="locked-padlock-circle">
+          <Lock size={56} />
+        </div>
+
+        <div>
+          <h2 className="locked-title">Resposta Travada</h2>
+          <p className="locked-subtext">Aguardando os outros jogadores...</p>
+        </div>
+
+        <div className="hud-bottom-bar" style={{ justifyContent: 'center' }}>
+          <div className="responses-counter-pill">
+            <Users size={18} />
+            <span>{participantesRespondidos} / {totalParticipantes} responderam</span>
+            <div className="responses-progress-track">
+              <div
+                className="responses-progress-fill"
+                style={{ width: `${Math.min(100, (participantesRespondidos / totalParticipantes) * 100)}%` }}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // ========================================================
+  // TELA 10 — PRÓXIMA PERGUNTA (TRANSIÇÃO - PAINEL 10)
+  // ========================================================
+  if (faseTela === 'transicao') {
+    return (
+      <div className="transition-screen-stage">
+        <GameTitle size="md" gold />
+        <h1 className="transition-title-glow">Próxima Pergunta</h1>
+        <div style={{ width: '100%', maxWidth: 480 }}>
+          <MetroTimeline total={10} current={nivelAtual + 1} showLabel={false} />
+        </div>
+      </div>
+    )
+  }
+
+  // ========================================================
+  // TELA 11 — RESULTADO FINAL (PÓDIO & TOP 5 - PAINEL 11)
+  // ========================================================
+  if (faseTela === 'fim' || fimDeJogo) {
+    const rankingMockOuReal =
+      rankingSala.length > 0
+        ? rankingSala
+        : [
+            { id: 1, nomeJogador: nomeExibicao, pontuacaoFinal: premioAcumulado, nivelAlcancado: acertosFinais },
+            { id: 2, nomeJogador: 'Carlos', pontuacaoFinal: 8110, nivelAlcancado: 9 },
+            { id: 3, nomeJogador: 'Mariana', pontuacaoFinal: 7950, nivelAlcancado: 9 },
+            { id: 4, nomeJogador: 'Pedro', pontuacaoFinal: 7120, nivelAlcancado: 8 },
+            { id: 5, nomeJogador: 'Lucas', pontuacaoFinal: 6840, nivelAlcancado: 7 },
+          ]
+
+    return (
+      <div className="final-results-stage">
+        <header className="final-results-header">
+          <CptmLogo size="md" />
+          <GameTitle size="md" gold />
+          <div className="final-results-ended-tag">Partida Encerrada</div>
+        </header>
+
+        <div className="final-results-body-grid">
+          {/* Pódio Olímpico 3D */}
+          <Podium players={rankingMockOuReal} formatScore={formatarMoeda} />
+
+          {/* Lateral: TOP 5 FINAL */}
+          <div className="top-5-card">
+            <div className="top-5-title">TOP 5 FINAL</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {rankingMockOuReal.slice(0, 5).map((player, idx) => (
+                <div
+                  key={player.id || idx}
+                  className={`top-5-row ${idx === 0 ? 'is-top-1' : ''}`}
+                >
+                  <div className="top-5-player-left">
+                    <span style={{ color: idx === 0 ? '#FFC629' : 'var(--text-muted)' }}>
+                      {idx + 1}º
+                    </span>
+                    <span>{player.nomeJogador || player.nome}</span>
+                  </div>
+                  <span className="top-5-score-gold">
+                    {formatarMoeda(player.pontuacaoFinal || player.pontos)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Ações Finais */}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => navigate('/')}
+            className="btn-cptm btn-cptm-primary btn-lg"
+          >
+            <RotateCcw size={18} />
+            <span>Jogar Novamente</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/ranking')}
+            className="btn-cptm btn-cptm-secondary btn-lg"
+          >
+            <Trophy size={18} />
+            <span>Ver Ranking Geral</span>
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // ========================================================
+  // TELA 05 & 06 — PERGUNTA (TELÃO E MOBILE) & TELA 09 (REVEAL)
   // ========================================================
   return (
-    <div className="gameplay-stage-wrapper">
-      {/* BARRA SUPERIOR (HUD DO SHOW) */}
-      <header className="gameplay-top-bar" role="banner">
-        <div className="top-bar-left">
-          <span className="game-show-title">SHOW DO TRILHÃO</span>
-          <span className="game-level-tag">Nível {nivelAtual} de 10</span>
+    <div className="gameplay-hud-container">
+      {/* HUD SUPERIOR: LOGO + METRO TIMELINE + PRÊMIO + CRONÔMETRO */}
+      <header className="hud-top-bar" role="banner">
+        <CptmLogo size="md" />
+
+        <div style={{ flex: 1, maxWidth: 420 }}>
+          <MetroTimeline total={10} current={nivelAtual} showLabel />
         </div>
 
-        {/* Cronômetro Regressivo de 45 segundos */}
-        <div className={`top-bar-center timer-pill ${tempoRestante <= 10 ? 'timer-urgent' : ''}`} aria-label={`Cronômetro: ${tempoRestante} segundos`}>
-          <Clock size={22} className="timer-icon" />
-          <span className="timer-seconds">{tempoRestante.toString().padStart(2, '0')}s</span>
-        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          <div className="hud-prize-badge" title="Valor desta pergunta">
+            {formatarMoeda(pergunta?.valorPremio || 25000)}
+          </div>
 
-        <div className="top-bar-right">
-          <div className="accumulated-box">
-            <span className="accumulated-label">Prêmio Acumulado:</span>
-            <span className="accumulated-value">{formatarMoeda(premioAcumulado)}</span>
-          </div>
-          <div className="current-prize-box">
-            <span className="current-prize-label">Vale nesta pergunta:</span>
-            <span className="current-prize-value">{formatarMoeda(pergunta.valorPremio)}</span>
-          </div>
+          <CircularTimer
+            seconds={tempoRestante}
+            totalSeconds={45}
+            size="md"
+          />
         </div>
       </header>
 
-      {/* ÁREA CENTRAL DO QUIZ */}
-      <main className="gameplay-main-stage">
-        {/* CARD DO ENUNCIADO EM VERMELHO ESCURO DEGRADÊ COM BORDA BRANCA */}
-        <section className="statement-box-tv" aria-labelledby="pergunta-enunciado">
-          <div className="statement-header-row">
-            <div className="statement-host-badge">
-              <img src={apresentadorImg} alt="Silvio dos Trilhos" className="statement-host-img" />
-              <span className="statement-host-caption">Silvio dos Trilhos pergunta:</span>
-            </div>
-            <span className="statement-stage-counter">Pergunta #{nivelAtual}</span>
-          </div>
-          <h2 id="pergunta-enunciado" className="statement-text-tv">
-            {pergunta.enunciado}
-          </h2>
-        </section>
-
-        {/* 4 ALTERNATIVAS EM LISTA VERTICAL COM CÍRCULO BRANCO E NÚMERO EM AZUL */}
-        <div className="options-vertical-list" role="radiogroup" aria-label="Alternativas">
-          {pergunta.alternativas?.map((alt) => {
-            let itemClass = 'option-row-item'
-            if (selecionada === alt.id) itemClass += ' selected'
-
-            if (confirmado && respostaFeedback) {
-              const ehCorreta = respostaFeedback.corretaNumero === alt.numero
-              if (ehCorreta) {
-                itemClass += ' correct'
-              } else if (selecionada === alt.id && !respostaFeedback.acertou) {
-                itemClass += ' wrong'
-              }
-            }
-
-            return (
-              <button
-                key={alt.id}
-                type="button"
-                role="radio"
-                aria-checked={selecionada === alt.id}
-                disabled={confirmado || enviandoResposta}
-                onClick={() => setSelecionada(alt.id)}
-                className={itemClass}
-              >
-                {/* Círculo branco numerado com o número em azul */}
-                <span className="option-circle-blue-num" aria-hidden="true">
-                  {alt.numero}
-                </span>
-
-                {/* Texto da alternativa */}
-                <span className="option-row-text">
-                  {alt.texto}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-
-        {/* FEEDBACK VISUAL APÓS CONFIRMAR */}
-        {confirmado && respostaFeedback && (
-          <div className={`answer-banner-tv ${respostaFeedback.acertou ? 'banner-correct' : 'banner-wrong'}`} role="status">
-            {respostaFeedback.acertou ? (
-              <>
-                <CheckCircle2 size={28} />
-                <div>
-                  <strong>Certa Resposta!</strong> {respostaFeedback.mensagem || 'Você garantiu o prêmio e avança para a próxima estação!'}
+      {/* ÁREA CENTRAL: ENUNCIADO E ALTERNATIVAS OU REVEAL */}
+      <main style={{ margin: 'auto 0', width: '100%' }}>
+        {faseTela === 'reveal' ? (
+          /* TELA 09 — REVEAL / RESULTADO (PAINEL 9) */
+          <div className="reveal-stage-container">
+            {/* Banner Resposta Correta */}
+            <div className="reveal-correct-box">
+              <CheckCircle2 size={36} />
+              <div>
+                <div className="reveal-correct-badge">Resposta Correta!</div>
+                <div className="reveal-correct-text">
+                  {respostaFeedback?.textoCorreta ||
+                    pergunta?.alternativas?.find((a) => a.correta)?.texto ||
+                    'Opção Certa'}
                 </div>
-              </>
-            ) : (
-              <>
-                <AlertTriangle size={28} />
-                <div>
-                  <strong>Não foi dessa vez, você errou!</strong> Encerrando a partida...
-                </div>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* CONTROLES DE AÇÃO E BOTÃO DISCRETO DE ABANDONAR PARTIDA */}
-        <div className="gameplay-footer-actions">
-          {/* Botões de Ação Positiva em Verde */}
-          <div className="footer-actions-left">
-            {!confirmado ? (
-              <button
-                type="button"
-                id="btn-confirmar-resposta"
-                disabled={!selecionada || enviandoResposta}
-                onClick={handleConfirmarResposta}
-                className="btn btn-positive-action btn-xl btn-pulse"
-              >
-                <span>{enviandoResposta ? 'Avaliando Resposta...' : 'Confirmar Resposta'}</span>
-                <ArrowRight size={20} />
-              </button>
-            ) : proximaPerguntaPendente ? (
-              <button
-                type="button"
-                id="btn-proxima-pergunta"
-                onClick={handleAvancarProxima}
-                className="btn btn-positive-action btn-xl btn-pulse"
-              >
-                <span>Próxima Pergunta</span>
-                <ArrowRight size={20} />
-              </button>
-            ) : null}
-          </div>
-
-          {/* Botão Discreto no Canto Inferior Direito: Abandonar Partida */}
-          <div className="footer-actions-right">
-            <button
-              type="button"
-              id="btn-abandonar-partida"
-              onClick={() => setMostrarModalAbandono(true)}
-              className="btn-abandon-subtle"
-              title="Abandonar partida (penalidade: perde tudo)"
-            >
-              <LogOut size={16} />
-              <span>Abandonar partida</span>
-            </button>
-          </div>
-        </div>
-      </main>
-
-      {/* MODAL DE CONFIRMAÇÃO DE ABANDONO */}
-      {mostrarModalAbandono && (
-        <div className="modal-backdrop" role="dialog" aria-modal="true">
-          <div className="modal-dialog card abandon-modal-dialog">
-            <div className="modal-header">
-              <div className="modal-title-wrap">
-                <AlertTriangle size={24} style={{ color: '#E2001A' }} />
-                <h3>Abandonar Partida?</h3>
               </div>
             </div>
 
-            <p className="modal-desc" style={{ color: 'var(--text-primary)', fontWeight: 600 }}>
-              Atenção! Conforme as regras oficiais do Show do Trilhão, ao abandonar a partida você <strong>perde todo o prêmio acumulado</strong> ({formatarMoeda(premioAcumulado)}) e encerra com <strong>R$ 0</strong>.
-            </p>
-
-            <div className="modal-footer-actions">
-              <button
-                type="button"
-                onClick={() => setMostrarModalAbandono(false)}
-                className="btn btn-secondary btn-md"
-              >
-                Continuar Jogando
-              </button>
-
-              <button
-                type="button"
-                disabled={abandonando}
-                onClick={handleConfirmarAbandono}
-                className="btn btn-danger-action btn-md"
-              >
-                <span>{abandonando ? 'Abandonando...' : 'Confirmar e Perder Tudo'}</span>
-              </button>
+            {/* Barras Horizontais Kahoot de Estatísticas */}
+            <div className="kahoot-bars-container">
+              {[
+                { letra: 'A', bg: '#ED102B', pct: 18 },
+                { letra: 'B', bg: '#0879F9', pct: 12 },
+                { letra: 'C', bg: '#00CC74', pct: 62 },
+                { letra: 'D', bg: '#FFB900', pct: 8 },
+              ].map(({ letra, bg, pct }) => (
+                <div key={letra} className="kahoot-bar-row">
+                  <div className="kahoot-bar-letter" style={{ backgroundColor: bg }}>
+                    {letra}
+                  </div>
+                  <div className="kahoot-bar-track">
+                    <div
+                      className="kahoot-bar-fill"
+                      style={{ width: `${pct}%`, backgroundColor: bg }}
+                    />
+                  </div>
+                  <div className="kahoot-bar-percent">{pct}%</div>
+                </div>
+              ))}
             </div>
+
+            {/* Card de Resultado Individual do Passageiro */}
+            <div className="player-result-summary-card">
+              <div className="player-result-header">Seu Resultado</div>
+              <div className={`player-result-status-text ${respostaFeedback?.acertou ? 'status-acertou' : 'status-errou'}`}>
+                {respostaFeedback?.acertou ? (
+                  <>
+                    <CheckCircle2 size={32} />
+                    <span>Acertou!</span>
+                  </>
+                ) : (
+                  <>
+                    <AlertTriangle size={32} />
+                    <span>Errou!</span>
+                  </>
+                )}
+              </div>
+
+              {respostaFeedback?.acertou && (
+                <div className="player-result-points">
+                  +{formatarMoeda(pergunta?.valorPremio || 25000)}
+                </div>
+              )}
+
+              <div className="player-result-stats-row">
+                <span>Total: <strong>{formatarMoeda(premioAcumulado)}</strong></span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#00CC74' }}>
+                  <TrendingUp size={15} /> {posicaoDelta} posições
+                </span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#FFB900' }}>
+                  <Flame size={15} /> {sequenciaAcertos} seguidos
+                </span>
+              </div>
+            </div>
+
+            {/* Botão de Avanço */}
+            {proximaPerguntaPendente && (
+              <button
+                type="button"
+                id="btn-avancar-proxima"
+                onClick={handleAvancarProxima}
+                className="btn-cptm btn-cptm-primary btn-xl btn-block btn-pulse"
+                style={{ marginTop: '0.5rem' }}
+              >
+                <span>Próxima Pergunta</span>
+                <ArrowRight size={22} />
+              </button>
+            )}
+          </div>
+        ) : (
+          /* TELA 05 / 06 / 07 — ENUNCIADO E ALTERNATIVAS */
+          <>
+            <div className="question-card-tv">
+              <h1 className="question-text-tv">{pergunta?.enunciado}</h1>
+            </div>
+
+            <div className="options-grid-stage" role="radiogroup" aria-label="Alternativas">
+              {pergunta?.alternativas?.map((alt) => {
+                const isSelected = selecionada === alt.id
+                const isDimmed = selecionada && !isSelected
+                const letra = getLetraAlternativa(alt.numero)
+                const corClasse = getClasseCorAlternativa(alt.numero)
+
+                return (
+                  <button
+                    key={alt.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={isSelected}
+                    disabled={enviandoResposta}
+                    onClick={() => setSelecionada(alt.id)}
+                    className={`option-btn-kahoot ${corClasse} ${isSelected ? 'selected-option' : ''} ${isDimmed ? 'dimmed-option' : ''}`}
+                  >
+                    <div className="option-badge-letter">{letra}</div>
+                    <div className="option-text-label">{alt.texto}</div>
+                    {isSelected && (
+                      <Check size={26} className="option-check-icon" strokeWidth={3} />
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </>
+        )}
+      </main>
+
+      {/* HUD INFERIOR: CONTADOR DE RESPOSTAS + BOTÃO TRAVAR + BOTÃO ABANDONAR */}
+      <footer className="hud-bottom-bar">
+        <div className="responses-counter-pill">
+          <Users size={18} />
+          <span>{participantesRespondidos} / {totalParticipantes} responderam</span>
+          <div className="responses-progress-track">
+            <div
+              className="responses-progress-fill"
+              style={{ width: `${Math.min(100, (participantesRespondidos / totalParticipantes) * 100)}%` }}
+            />
           </div>
         </div>
-      )}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {/* TELA 07: BOTÃO TRAVAR RESPOSTA */}
+          {faseTela === 'pergunta' && selecionada && (
+            <button
+              type="button"
+              id="btn-travar-resposta"
+              disabled={enviandoResposta}
+              onClick={handleTravarResposta}
+              className="btn-cptm btn-cptm-primary btn-lg btn-pulse"
+            >
+              <Lock size={18} />
+              <span>Travar Resposta</span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setMostrarModalAbandono(true)}
+            style={{
+              color: 'var(--text-muted)',
+              fontSize: '0.82rem',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              padding: '0.4rem 0.75rem',
+            }}
+            title="Abandonar partida"
+          >
+            <LogOut size={14} />
+            <span>Abandonar</span>
+          </button>
+        </div>
+      </footer>
+
+      {/* MODAL DE CONFIRMAÇÃO DE ABANDONO */}
+      <GameModal
+        isOpen={mostrarModalAbandono}
+        onClose={() => setMostrarModalAbandono(false)}
+        title="Abandonar Partida?"
+        icon={AlertTriangle}
+        size="sm"
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+          <p style={{ fontSize: '0.92rem', color: 'var(--text-light)', lineHeight: 1.4 }}>
+            Atenção! Ao abandonar a partida você <strong>perde todo o prêmio acumulado</strong> ({formatarMoeda(premioAcumulado)}) e encerra com <strong>R$ 0</strong>.
+          </p>
+          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '0.5rem' }}>
+            <button
+              type="button"
+              onClick={() => setMostrarModalAbandono(false)}
+              className="btn-cptm btn-cptm-secondary btn-md"
+            >
+              Continuar
+            </button>
+            <button
+              type="button"
+              disabled={abandonando}
+              onClick={handleConfirmarAbandono}
+              className="btn-cptm btn-cptm-primary btn-md"
+            >
+              {abandonando ? 'Saindo...' : 'Sim, Abandonar'}
+            </button>
+          </div>
+        </div>
+      </GameModal>
     </div>
   )
 }
