@@ -3,6 +3,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Trophy, Play, LogIn, LogOut, User, LayoutDashboard, HelpCircle, Award } from 'lucide-react'
 import CptmLogo from './CptmLogo'
+import GameLogo from './GameLogo'
 import GameModal from './GameModal'
 
 export default function Navbar() {
@@ -19,9 +20,16 @@ export default function Navbar() {
     <>
       <header className="cptm-navbar" role="banner">
         <div className="navbar-inner">
-          {/* Logo CPTM Oficial à Esquerda */}
-          <Link to="/" className="navbar-brand" title="Show do Trilhão • CPTM">
+          {/* Logo CPTM Oficial + Show do Trilhão */}
+          <Link
+            to="/"
+            className="navbar-brand"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.75rem' }}
+            title="Show do Trilhão • CPTM"
+          >
             <CptmLogo size="md" />
+            <div style={{ height: '22px', width: '1px', background: 'rgba(255, 255, 255, 0.15)' }} />
+            <GameLogo size="xs" />
           </Link>
 
           {/* Links e Ações à Direita */}

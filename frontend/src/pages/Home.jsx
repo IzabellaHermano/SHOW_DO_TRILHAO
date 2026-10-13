@@ -5,6 +5,7 @@ import { partidaService, salaService } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import { Play, Users, Train, ArrowRight, ShieldAlert, Sparkles } from 'lucide-react'
 import GameTitle from '../components/GameTitle'
+import GameLogo from '../components/GameLogo'
 import MetroTimeline from '../components/MetroTimeline'
 import GameModal from '../components/GameModal'
 import CptmLogo from '../components/CptmLogo'
@@ -105,11 +106,13 @@ export default function Home() {
 
       {/* Conteúdo Central do Palco */}
       <div className="home-center-content">
-        {/* Logotipo 3D Oficial do Show do Trilhão */}
-        <GameTitle
-          size="lg"
-          subtitle="Conhecimento nos trilhos. Quem chega ao trilhão?"
-        />
+        {/* Logotipo Oficial do Show do Trilhão (Protagonista da Home) */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <GameLogo size="xl" />
+          <p className="game-title-subtitle" style={{ marginTop: '0.85rem' }}>
+            Conhecimento nos trilhos. Quem chega ao trilhão?
+          </p>
+        </div>
 
         {/* Pilha de Botões de Ação Principal */}
         <div className="home-actions-group">
@@ -166,7 +169,7 @@ export default function Home() {
         <div className="enter-game-card-content">
           <div className="enter-game-branding">
             <CptmLogo size="md" />
-            <span className="enter-game-subbrand">SHOW DO TRILHÃO</span>
+            <GameLogo size="sm" />
           </div>
 
           <h3 className="enter-game-title">Entre no Jogo</h3>

@@ -19,6 +19,7 @@ import {
   Users
 } from 'lucide-react'
 import CptmLogo from '../components/CptmLogo'
+import GameLogo from '../components/GameLogo'
 import GameTitle from '../components/GameTitle'
 import CircularTimer from '../components/CircularTimer'
 import MetroTimeline from '../components/MetroTimeline'
@@ -398,11 +399,10 @@ export default function Jogo() {
   if (faseTela === 'lobby_jogador') {
     return (
       <div className="player-lobby-mobile">
-        <div className="player-lobby-header">
-          <CptmLogo size="md" />
-          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-            SHOW DO TRILHÃO
-          </span>
+        <div className="player-lobby-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.85rem' }}>
+          <CptmLogo size="sm" />
+          <div style={{ height: '22px', width: '1px', background: 'rgba(255, 255, 255, 0.2)' }} />
+          <GameLogo size="sm" />
         </div>
 
         <div className="player-lobby-card-box">
@@ -448,8 +448,10 @@ export default function Jogo() {
   if (faseTela === 'travada') {
     return (
       <div className="locked-screen-mobile">
-        <div className="player-lobby-header">
-          <CptmLogo size="md" />
+        <div className="player-lobby-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
+          <CptmLogo size="sm" />
+          <div style={{ height: '20px', width: '1px', background: 'rgba(255, 255, 255, 0.2)' }} />
+          <GameLogo size="xs" />
         </div>
 
         <div className="locked-padlock-circle">
@@ -483,7 +485,7 @@ export default function Jogo() {
   if (faseTela === 'transicao') {
     return (
       <div className="transition-screen-stage">
-        <GameTitle size="md" gold />
+        <GameLogo size="lg" />
         <h1 className="transition-title-glow">Próxima Pergunta</h1>
         <div style={{ width: '100%', maxWidth: 480 }}>
           <MetroTimeline total={10} current={nivelAtual + 1} showLabel={false} />
@@ -510,8 +512,10 @@ export default function Jogo() {
     return (
       <div className="final-results-stage">
         <header className="final-results-header">
-          <CptmLogo size="md" />
-          <GameTitle size="md" gold />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.25rem', marginBottom: '0.4rem' }}>
+            <CptmLogo size="md" />
+            <GameLogo size="md" />
+          </div>
           <div className="final-results-ended-tag">Partida Encerrada</div>
         </header>
 
@@ -571,9 +575,13 @@ export default function Jogo() {
   // ========================================================
   return (
     <div className="gameplay-hud-container">
-      {/* HUD SUPERIOR: LOGO + METRO TIMELINE + PRÊMIO + CRONÔMETRO */}
+      {/* HUD SUPERIOR: LOGO CPTM + SHOW DO TRILHÃO + METRO TIMELINE + PRÊMIO + CRONÔMETRO */}
       <header className="hud-top-bar" role="banner">
-        <CptmLogo size="md" />
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <CptmLogo size="sm" />
+          <div style={{ height: '22px', width: '1px', background: 'rgba(255, 255, 255, 0.15)' }} />
+          <GameLogo size="xs" />
+        </div>
 
         <div style={{ flex: 1, maxWidth: 420 }}>
           <MetroTimeline total={10} current={nivelAtual} showLabel />

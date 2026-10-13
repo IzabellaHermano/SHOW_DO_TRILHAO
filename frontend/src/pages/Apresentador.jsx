@@ -22,6 +22,7 @@ import {
   Sparkles
 } from 'lucide-react'
 import CptmLogo from '../components/CptmLogo'
+import GameLogo from '../components/GameLogo'
 import GameTitle from '../components/GameTitle'
 import PlayerPill from '../components/PlayerPill'
 import GameModal from '../components/GameModal'
@@ -299,7 +300,7 @@ export default function Apresentador() {
             <CptmLogo size="md" />
           </div>
 
-          <GameTitle size="sm" gold />
+          <GameLogo size="md" />
 
           <div className="lobby-status-badge pulse">
             <span>Aguardando Início</span>
@@ -373,8 +374,11 @@ export default function Apresentador() {
   return (
     <div className="presenter-page-container">
       <header className="presenter-header">
-        <CptmLogo size="lg" />
-        <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '2rem', marginTop: '0.75rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1.25rem', marginBottom: '0.75rem' }}>
+          <CptmLogo size="lg" />
+          <GameLogo size="md" />
+        </div>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '2rem', marginTop: '0.5rem' }}>
           Cabine de Controle • Mestre de Cerimônias
         </h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem' }}>

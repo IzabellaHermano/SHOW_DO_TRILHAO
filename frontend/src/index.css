@@ -134,6 +134,56 @@ input, select, textarea {
 }
 
 /* ========================================================
+   LOGOTIPOS OFICIAIS DO PROJETO (SHOW DO TRILHÃO E CPTM)
+   ======================================================== */
+.game-logo-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  transition: transform var(--transition-fast);
+}
+
+.game-logo-image {
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 8px 26px rgba(0, 0, 0, 0.7));
+}
+
+.game-logo-xs { height: 36px; }
+.game-logo-sm { height: 58px; }
+.game-logo-md { height: 95px; }
+.game-logo-lg { height: 150px; }
+.game-logo-xl {
+  height: clamp(140px, 23vw, 230px);
+}
+
+.cptm-logo-wrapper {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.cptm-logo-image {
+  width: auto;
+  height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
+}
+
+.cptm-logo-xs { height: 24px; }
+.cptm-logo-sm { height: 32px; }
+.cptm-logo-md { height: 44px; }
+.cptm-logo-lg { height: 58px; }
+.cptm-logo-xl { height: 76px; }
+
+/* ========================================================
    LOGOTIPO 3D DO GAME SHOW — "SHOW DO TRILHÃO"
    ======================================================== */
 .game-title-container {
