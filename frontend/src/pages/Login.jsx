@@ -5,6 +5,7 @@ import { authService } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import { LogIn, UserPlus, ShieldAlert, Sparkles, CheckCircle2 } from 'lucide-react'
 import CptmLogo from '../components/CptmLogo'
+import GameLogo from '../components/GameLogo'
 import GameTitle from '../components/GameTitle'
 
 export default function Login() {
@@ -80,8 +81,11 @@ export default function Login() {
     <div className="home-hero-stage" style={{ minHeight: 'calc(100vh - 65px)', justifyContent: 'center' }}>
       <div className="game-modal-container modal-md" style={{ margin: 'auto 0' }}>
         <div style={{ textAlign: 'center', padding: '2rem 2rem 1rem 2rem' }}>
-          <CptmLogo size="lg" />
-          <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '1.75rem', marginTop: '0.75rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+            <CptmLogo size="md" />
+            <GameLogo size="sm" />
+          </div>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '1.75rem', marginTop: '0.5rem' }}>
             {isRegister ? 'Cadastre-se nos Trilhos' : 'Acesse sua Conta CPTM'}
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginTop: '0.25rem' }}>

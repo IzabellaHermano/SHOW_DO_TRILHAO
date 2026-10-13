@@ -3,6 +3,7 @@ import { rankingService } from '../services/api'
 import { useToast } from '../context/ToastContext'
 import { Trophy, Award, Search, Users, RefreshCw, CheckCircle, UserCheck, UserX } from 'lucide-react'
 import CptmLogo from '../components/CptmLogo'
+import GameLogo from '../components/GameLogo'
 import Podium from '../components/Podium'
 
 export default function Ranking() {
@@ -66,8 +67,11 @@ export default function Ranking() {
     <div className="ranking-page-shell">
       {/* Cabeçalho */}
       <header style={{ textAlign: 'center', marginBottom: '2rem' }}>
-        <CptmLogo size="lg" />
-        <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '2.4rem', marginTop: '0.75rem', letterSpacing: '0.02em' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1.25rem', marginBottom: '0.5rem' }}>
+          <CptmLogo size="lg" />
+          <GameLogo size="md" />
+        </div>
+        <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '2.4rem', marginTop: '0.5rem', letterSpacing: '0.02em' }}>
           Galeria dos Milionários dos Trilhos
         </h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '1rem', maxWidth: 600, margin: '0.5rem auto 0 auto' }}>

@@ -1,12 +1,16 @@
 import { Link } from 'react-router-dom'
 import { AlertTriangle, Home, Trophy } from 'lucide-react'
 import CptmLogo from '../components/CptmLogo'
+import GameLogo from '../components/GameLogo'
 
 export default function NotFound() {
   return (
     <div className="home-hero-stage" style={{ minHeight: 'calc(100vh - 65px)', justifyContent: 'center' }}>
       <div className="game-modal-container modal-md" style={{ margin: 'auto 0', textAlign: 'center', padding: '2.5rem 2rem' }}>
-        <CptmLogo size="lg" />
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+          <CptmLogo size="lg" />
+          <GameLogo size="sm" />
+        </div>
         <div style={{ margin: '1.5rem 0 0.5rem 0', color: '#ED102B' }}>
           <AlertTriangle size={64} style={{ margin: '0 auto' }} />
         </div>
