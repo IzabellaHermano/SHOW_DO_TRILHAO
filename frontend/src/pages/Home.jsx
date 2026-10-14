@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { partidaService, salaService } from '../services/api'
 import { useToast } from '../context/ToastContext'
@@ -12,6 +12,8 @@ import CptmLogo from '../components/CptmLogo'
 
 export default function Home() {
   const navigate = useNavigate()
+  const { codigo } = useParams()
+  const [searchParams] = useSearchParams()
   const { user, isAuthenticated, isPresenter } = useAuth()
   const toast = useToast()
 
@@ -21,6 +23,15 @@ export default function Home() {
   const [apelido, setApelido] = useState(user?.nome || '')
   const [erro, setErro] = useState('')
   const [carregando, setCarregando] = useState(false)
+
+  // Ao abrir via QR Code (ex: /entrar/CPTM-X7K2 ou /?sala=CPTM-X7K2), preenche automaticamente
+  useEffect(() => {
+    const codUrl = codigo || searchParams.get('sala') || searchParams.get('codigo')
+    if (codUrl) {
+      setCodigoSala(codUrl.toUpperCase())
+      setMostrarModalEntrar(true)
+    }
+  }, [codigo, searchParams])
 
   const handleAbrirEntrar = () => {
     setErro('')

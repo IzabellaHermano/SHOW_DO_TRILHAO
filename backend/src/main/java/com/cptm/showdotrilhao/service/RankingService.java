@@ -50,7 +50,7 @@ public class RankingService {
         Sala sala = salaRepository.findByCodigo(codigoSala.trim().toUpperCase())
                 .orElseThrow(() -> new ResourceNotFoundException("Sala não encontrada com código: " + codigoSala));
 
-        List<Partida> partidas = partidaRepository.findRankingSala(sala, StatusPartida.EM_ANDAMENTO);
+        List<Partida> partidas = partidaRepository.findRankingSala(sala, StatusPartida.ABANDONADA);
         List<RankingItemDTO> ranking = new ArrayList<>();
 
         int pos = 1;

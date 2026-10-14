@@ -84,7 +84,7 @@ export default function Apresentador() {
       setNomeSala('')
       setMostrarModalCriar(false)
       toast.success(`Sala oficial ${novaSala.codigo} criada com sucesso!`, 'Sala Criada')
-      // Abre automaticamente no Telão
+      // Abre automaticamente no Telão com plataforma limpa
       abrirLobbyTelao(novaSala)
     } catch (err) {
       console.error('Erro ao criar sala:', err)
@@ -113,21 +113,54 @@ export default function Apresentador() {
     toast.success(`Código ${codigo} copiado para a área de transferência!`, 'Copiado')
   }
 
-  // Abre o Lobby do Apresentador / Telão (Painel 2 da referência)
-  const abrirLobbyTelao = async (sala) => {
-    setSalaTelaoAtiva(sala)
-    // Carrega participantes da sala pelo ranking ou cria lista inicial
-    try {
-      const ranking = await rankingService.obterRankingSala(sala.codigo)
-      if (ranking && ranking.length > 0) {
-        setParticipantesLobby(ranking.map((r) => r.nomeJogador))
-      } else {
-        setParticipantesLobby(['Ana', 'Lucas', 'Melissa', 'Julia', 'Rafael', 'Beatriz', 'Carlos', 'Mariana'])
-      }
-    } catch (e) {
-      setParticipantesLobby(['Ana', 'Lucas', 'Melissa', 'Julia', 'Rafael', 'Beatriz', 'Carlos', 'Mariana'])
-    }
+  const copiarLink = (link) => {
+    navigator.clipboard.writeText(link)
+    toast.success('Link da sala copiado! Compartilhe com os participantes.', 'Link Copiado')
   }
+
+  // Abre o Lobby do Apresentador / Telão (Painel 2 da referência)
+  const abrirLobbyTelao = (sala) => {
+    setSalaTelaoAtiva(sala)
+    setParticipantesLobby([]) // Inicializa rigorosamente vazio: ZERO jogadores fictícios
+  }
+
+  // Polling em tempo real dos participantes reais da sala no backend
+  useEffect(() => {
+    if (!salaTelaoAtiva) return
+
+    let montado = true
+
+    const buscarParticipantes = async () => {
+      try {
+        const ranking = await rankingService.obterRankingSala(salaTelaoAtiva.codigo)
+        if (!montado) return
+        if (ranking && Array.isArray(ranking)) {
+          // Extrai os nomes reais dos participantes (nome ou nomeJogador)
+          const nomes = ranking.map((r) => r.nome || r.nomeJogador).filter(Boolean)
+          setParticipantesLobby(nomes)
+        } else {
+          setParticipantesLobby([])
+        }
+      } catch (err) {
+        // Se a sala ainda não tem partidas ou der erro, mantém lista vazia sem mocks
+        console.warn('Lobby participante sync:', err?.message || err)
+        if (montado && participantesLobby.length === 0) {
+          setParticipantesLobby([])
+        }
+      }
+    }
+
+    // Busca imediata
+    buscarParticipantes()
+
+    // Atualiza a cada 2.5s para sincronizar os participantes entrando ao vivo
+    const timer = setInterval(buscarParticipantes, 2500)
+
+    return () => {
+      montado = false
+      clearInterval(timer)
+    }
+  }, [salaTelaoAtiva])
 
   // Iniciar o Show no Telão
   const handleIniciarShow = () => {
@@ -137,6 +170,7 @@ export default function Apresentador() {
       state: {
         codigoSala: salaTelaoAtiva.codigo,
         nomeJogador: user?.nome || 'Apresentador',
+        isApresentador: true,
       },
     })
   }
@@ -281,7 +315,9 @@ export default function Apresentador() {
   // TELA 02 — LOBBY DO APRESENTADOR / TELÃO (PAINEL 2)
   // ========================================================
   if (salaTelaoAtiva) {
-    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=https://app.showdotrilhao.com/entrar/${salaTelaoAtiva.codigo}`
+    const origin = window.location.origin
+    const gameUrl = `${origin}/entrar/${salaTelaoAtiva.codigo}`
+    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(gameUrl)}`
 
     return (
       <div className="lobby-stage-container">
@@ -327,20 +363,41 @@ export default function Apresentador() {
               <div className="lobby-qr-caption">
                 Escaneie o QR Code ou acesse:
                 <br />
-                <strong>app.showdotrilhao.com/entrar/{salaTelaoAtiva.codigo}</strong>
+                <strong style={{ wordBreak: 'break-all' }}>{gameUrl}</strong>
               </div>
+              <button
+                type="button"
+                onClick={() => copiarLink(gameUrl)}
+                className="btn-cptm btn-cptm-secondary btn-sm"
+                style={{ marginTop: '0.65rem' }}
+              >
+                <Copy size={15} />
+                <span>Copiar Link da Sala</span>
+              </button>
             </div>
 
-            {/* Centro: Grid de Participantes com Avatares */}
+            {/* Centro: Grid de Participantes Reais com Avatares */}
             <div className="lobby-players-center">
               <div className="lobby-players-title">
                 Passageiros na Plataforma
               </div>
-              <div className="lobby-players-pills-wrap">
-                {participantesLobby.map((nome, i) => (
-                  <PlayerPill key={i} name={nome} />
-                ))}
-              </div>
+              {participantesLobby.length === 0 ? (
+                <div className="lobby-empty-platform" style={{ padding: '2.5rem 1rem', textAlign: 'center' }}>
+                  <Users size={38} style={{ color: 'var(--cptm-gold)', margin: '0 auto 0.75rem auto', opacity: 0.85 }} />
+                  <p style={{ fontSize: '1.15rem', fontWeight: 800, color: '#FFFFFF', margin: 0 }}>
+                    Plataforma vazia! Compartilhe o código para iniciar o embarque.
+                  </p>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                    Assim que os passageiros escanearem o QR Code ou informarem o código <strong>{salaTelaoAtiva.codigo}</strong>, aparecerão aqui ao vivo.
+                  </p>
+                </div>
+              ) : (
+                <div className="lobby-players-pills-wrap">
+                  {participantesLobby.map((nome, i) => (
+                    <PlayerPill key={i} name={nome} />
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Direita: Contador Gigante de Jogadores */}

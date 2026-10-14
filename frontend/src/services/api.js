@@ -23,10 +23,17 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
+let isCurrentlyOffline = false
+
 // Interceptador de resposta para tratar erros comuns e cold start do Render
 api.interceptors.response.use(
   (response) => {
-    // Se respondeu com sucesso, notifica que o servidor está online/aquecido
+    // Se respondeu com sucesso após uma perda de conexão, notifica reconexão
+    if (isCurrentlyOffline) {
+      isCurrentlyOffline = false
+      window.dispatchEvent(new CustomEvent('app-connection-restored'))
+    }
+    // Notifica que o servidor está online/aquecido
     window.dispatchEvent(new CustomEvent('server-online'))
     return response
   },
@@ -39,20 +46,25 @@ api.interceptors.response.use(
       localStorage.removeItem('show_trilhao_user')
     }
 
-    // Tratamento de Cold Start no Render: se deu timeout ou erro de rede, tenta mais 1 vez
-    if (
-      (!error.response || error.code === 'ECONNABORTED' || error.message.includes('timeout')) &&
-      originalRequest &&
-      !originalRequest._retry
-    ) {
-      originalRequest._retry = true
-      // Notifica a interface sobre o aquecimento do servidor
-      window.dispatchEvent(
-        new CustomEvent('server-cold-start', {
-          detail: { message: 'O servidor no Render está acordando do modo repouso. Aguarde alguns instantes...' },
-        })
-      )
-      return api(originalRequest)
+    // Erros de rede ou timeout indicam desconexão ou cold start
+    const isNetworkError = !error.response || error.code === 'ECONNABORTED' || (error.message && error.message.includes('timeout'))
+
+    if (isNetworkError) {
+      if (!isCurrentlyOffline) {
+        isCurrentlyOffline = true
+        window.dispatchEvent(new CustomEvent('app-connection-lost'))
+      }
+
+      // Tratamento de Cold Start no Render: se deu timeout ou erro de rede, tenta mais 1 vez
+      if (originalRequest && !originalRequest._retry) {
+        originalRequest._retry = true
+        window.dispatchEvent(
+          new CustomEvent('server-cold-start', {
+            detail: { message: 'O servidor no Render está acordando do modo repouso. Aguarde alguns instantes...' },
+          })
+        )
+        return api(originalRequest)
+      }
     }
 
     return Promise.reject(error)

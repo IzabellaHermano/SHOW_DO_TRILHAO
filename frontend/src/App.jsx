@@ -19,6 +19,8 @@ function App() {
       <Route element={<Layout />}>
         {/* Rotas Públicas */}
         <Route path="/" element={<Home />} />
+        <Route path="/entrar" element={<Home />} />
+        <Route path="/entrar/:codigo" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/ranking" element={<Ranking />} />
         <Route path="/jogo" element={<Jogo />} />

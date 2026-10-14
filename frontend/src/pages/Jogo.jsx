@@ -3,7 +3,6 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { partidaService, rankingService } from '../services/api'
 import { useToast } from '../context/ToastContext'
-import confetti from 'canvas-confetti'
 import {
   Train,
   Check,
@@ -127,10 +126,11 @@ export default function Jogo() {
         setPartidaInfo(status)
         setPremioAcumulado(status.pontuacaoFinal || 0)
 
-        // Carrega dados de ranking da sala para o pódio e top 5
-        if (status.codigoSala) {
+        // Carrega dados reais de ranking da sala para o pódio e top 5
+        const codSala = status.salaCodigo || status.codigoSala || location.state?.codigoSala
+        if (codSala) {
           try {
-            const ranking = await rankingService.obterRankingSala(status.codigoSala)
+            const ranking = await rankingService.obterRankingSala(codSala)
             if (ranking && ranking.length) {
               setRankingSala(ranking)
               setTotalParticipantes(Math.max(ranking.length, 1))
@@ -152,8 +152,8 @@ export default function Jogo() {
         } else if (status.perguntaAtual) {
           setPergunta(status.perguntaAtual)
           setTempoRestante(45)
-          // Se o usuário veio pelo fluxo de entrada, exibe brevemente o Lobby do Jogador (Panel 3)
-          // antes de abrir a pergunta, garantindo a visualização da tela de confirmação
+          // Se o usuário veio pelo fluxo de entrada, exibe o Lobby do Jogador (Panel 3)
+          // aguardando o apresentador iniciar o show
           if (location.state?.codigoSala && !sessionStorage.getItem(`lobby_visto_${currentId}`)) {
             sessionStorage.setItem(`lobby_visto_${currentId}`, 'true')
             setFaseTela('lobby_jogador')
@@ -179,6 +179,46 @@ export default function Jogo() {
       montado = false
     }
   }, [id, isAuthenticated, location.state, navigate])
+
+  // Sincronização em tempo real do lobby do jogador aguardando o apresentador
+  useEffect(() => {
+    if (faseTela !== 'lobby_jogador') return
+
+    const codSala = partidaInfo?.salaCodigo || partidaInfo?.codigoSala || location.state?.codigoSala
+    if (!codSala) return
+
+    let montado = true
+
+    const checarStatusLobby = async () => {
+      try {
+        const ranking = await rankingService.obterRankingSala(codSala)
+        if (!montado) return
+        if (ranking && Array.isArray(ranking)) {
+          setRankingSala(ranking)
+          setTotalParticipantes(Math.max(ranking.length, 1))
+
+          // Se o apresentador iniciou ou outros jogadores já responderam, avança
+          const showIniciado = ranking.some((r) => {
+            const n = (r.nome || r.nomeJogador || '').toLowerCase()
+            const jaPontuou = (r.pontuacao || r.pontuacaoFinal || 0) > 0 || (r.nivel || r.nivelAlcancado || 0) > 0
+            return n.includes('apresentador') || n.includes('silvio') || n.includes('mestre') || jaPontuou
+          })
+
+          if (showIniciado) {
+            setFaseTela('pergunta')
+          }
+        }
+      } catch (err) {
+        console.warn('Lobby sync polling:', err?.message || err)
+      }
+    }
+
+    const interval = setInterval(checarStatusLobby, 2500)
+    return () => {
+      montado = false
+      clearInterval(interval)
+    }
+  }, [faseTela, partidaInfo, location.state])
 
   // Trata tempo esgotado (45 segundos)
   const handleTempoEsgotado = useCallback(async () => {
@@ -498,16 +538,31 @@ export default function Jogo() {
   // TELA 11 — RESULTADO FINAL (PÓDIO & TOP 5 - PAINEL 11)
   // ========================================================
   if (faseTela === 'fim' || fimDeJogo) {
-    const rankingMockOuReal =
-      rankingSala.length > 0
-        ? rankingSala
-        : [
-            { id: 1, nomeJogador: nomeExibicao, pontuacaoFinal: premioAcumulado, nivelAlcancado: acertosFinais },
-            { id: 2, nomeJogador: 'Carlos', pontuacaoFinal: 8110, nivelAlcancado: 9 },
-            { id: 3, nomeJogador: 'Mariana', pontuacaoFinal: 7950, nivelAlcancado: 9 },
-            { id: 4, nomeJogador: 'Pedro', pontuacaoFinal: 7120, nivelAlcancado: 8 },
-            { id: 5, nomeJogador: 'Lucas', pontuacaoFinal: 6840, nivelAlcancado: 7 },
-          ]
+    // Lista exclusiva de participantes reais (sem mocks de fallback)
+    const listaReal = [...rankingSala]
+
+    // Se o jogador atual ainda não constar no ranking da sala, adiciona seu resultado real
+    const jaContem = listaReal.some(
+      (p) => (p.nome || p.nomeJogador) === nomeExibicao
+    )
+    if (!jaContem && nomeExibicao) {
+      listaReal.push({
+        id: partidaId || Date.now(),
+        nome: nomeExibicao,
+        nomeJogador: nomeExibicao,
+        pontuacao: premioAcumulado,
+        pontuacaoFinal: premioAcumulado,
+        nivel: acertosFinais,
+        nivelAlcancado: acertosFinais,
+      })
+    }
+
+    // Ordena decrescente por pontuação real
+    listaReal.sort((a, b) => {
+      const scoreA = a.pontuacao ?? a.pontuacaoFinal ?? 0
+      const scoreB = b.pontuacao ?? b.pontuacaoFinal ?? 0
+      return scoreB - scoreA
+    })
 
     return (
       <div className="final-results-stage">
@@ -520,14 +575,14 @@ export default function Jogo() {
         </header>
 
         <div className="final-results-body-grid">
-          {/* Pódio Olímpico 3D */}
-          <Podium players={rankingMockOuReal} formatScore={formatarMoeda} />
+          {/* Pódio Olímpico 3D Real */}
+          <Podium players={listaReal} formatScore={formatarMoeda} />
 
-          {/* Lateral: TOP 5 FINAL */}
+          {/* Lateral: TOP 5 FINAL Real */}
           <div className="top-5-card">
             <div className="top-5-title">TOP 5 FINAL</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              {rankingMockOuReal.slice(0, 5).map((player, idx) => (
+              {listaReal.slice(0, 5).map((player, idx) => (
                 <div
                   key={player.id || idx}
                   className={`top-5-row ${idx === 0 ? 'is-top-1' : ''}`}
@@ -536,10 +591,10 @@ export default function Jogo() {
                     <span style={{ color: idx === 0 ? '#FFC629' : 'var(--text-muted)' }}>
                       {idx + 1}º
                     </span>
-                    <span>{player.nomeJogador || player.nome}</span>
+                    <span>{player.nome || player.nomeJogador || player.jogadorNome}</span>
                   </div>
                   <span className="top-5-score-gold">
-                    {formatarMoeda(player.pontuacaoFinal || player.pontos)}
+                    {formatarMoeda(player.pontuacao ?? player.pontuacaoFinal ?? player.pontos ?? 0)}
                   </span>
                 </div>
               ))}

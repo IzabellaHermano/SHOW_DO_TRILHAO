@@ -17,3 +17,9 @@ spring:
       path: /h2-console
   flyway:
     enabled: false
+
+admin:
+  password: ${ADMIN_PASSWORD:Admin@CPTM2026}
+
+apresentador:
+  password: ${APRESENTADOR_PASSWORD:Mestre@CPTM2026}

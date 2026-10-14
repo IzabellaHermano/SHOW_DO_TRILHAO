@@ -189,7 +189,7 @@ export default function Ranking() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.45rem' }}>
-                        <strong style={{ color: '#FFFFFF' }}>{item.nomeJogador}</strong>
+                        <strong style={{ color: '#FFFFFF' }}>{item.nome || item.nomeJogador || 'Passageiro'}</strong>
                         {item.status === 'VITORIA' && (
                           <span style={{ fontSize: '0.72rem', color: '#00CC74', display: 'inline-flex', alignItems: 'center', gap: '2px', background: 'rgba(0, 204, 116, 0.15)', padding: '0.1rem 0.4rem', borderRadius: 4 }}>
                             <CheckCircle size={11} /> Milionário
@@ -209,10 +209,10 @@ export default function Ranking() {
                       )}
                     </td>
                     <td style={{ textAlign: 'center', fontWeight: 700 }}>
-                      {item.nivelAlcancado} de 10
+                      {item.nivel ?? item.nivelAlcancado ?? 0} de 10
                     </td>
                     <td style={{ textAlign: 'right', fontFamily: 'var(--font-display)', fontWeight: 900, color: '#FFC629' }}>
-                      {formatarMoeda(item.pontuacaoFinal)}
+                      {formatarMoeda(item.pontuacao ?? item.pontuacaoFinal ?? 0)}
                     </td>
                     <td style={{ textAlign: 'right', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
                       {formatarData(item.data)}
