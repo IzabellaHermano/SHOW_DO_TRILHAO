@@ -9,15 +9,24 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PartidaRepository extends JpaRepository<Partida, Long> {
 
-    @Query("SELECT p FROM Partida p WHERE p.sala = :sala AND p.status != :statusExcluido ORDER BY p.pontuacaoFinal DESC, p.nivelAlcancado DESC, p.iniciadaEm DESC")
+    @Query("SELECT p FROM Partida p WHERE p.sala = :sala AND p.status != :statusExcluido ORDER BY p.pontuacaoFinal DESC, p.nivelAlcancado DESC, p.tempoTotalRespostaMs ASC, p.iniciadaEm ASC")
     List<Partida> findRankingSala(@Param("sala") Sala sala, @Param("statusExcluido") StatusPartida statusExcluido);
 
     @Query("SELECT p FROM Partida p WHERE p.usuario IS NOT NULL AND p.status != :statusExcluido ORDER BY p.pontuacaoFinal DESC, p.nivelAlcancado DESC, p.iniciadaEm DESC")
     List<Partida> findRankingGeral(@Param("statusExcluido") StatusPartida statusExcluido);
 
     List<Partida> findByUsuarioIdOrderByIniciadaEmDesc(Long usuarioId);
+
+    Optional<Partida> findByTokenSessao(String tokenSessao);
+
+    Optional<Partida> findBySalaAndUsuarioId(Sala sala, Long usuarioId);
+
+    boolean existsBySalaAndNomeVisitanteIgnoreCase(Sala sala, String nomeVisitante);
+
+    List<Partida> findBySala(Sala sala);
 }

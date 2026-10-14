@@ -4,7 +4,9 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "respostas_partida")
+@Table(name = "respostas_partida", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_resposta_partida_pergunta", columnNames = {"partida_id", "pergunta_id"})
+})
 public class RespostaPartida {
 
     @Id
@@ -29,6 +31,9 @@ public class RespostaPartida {
     @Column(name = "tempo_esgotado", nullable = false)
     private boolean tempoEsgotado = false;
 
+    @Column(name = "tempo_resposta_ms")
+    private Long tempoRespostaMs = 0L;
+
     @Column(name = "respondida_em", nullable = false)
     private LocalDateTime respondidaEm;
 
@@ -36,11 +41,16 @@ public class RespostaPartida {
     }
 
     public RespostaPartida(Partida partida, Pergunta pergunta, Alternativa alternativaEscolhida, boolean acertou, boolean tempoEsgotado) {
+        this(partida, pergunta, alternativaEscolhida, acertou, tempoEsgotado, 0L);
+    }
+
+    public RespostaPartida(Partida partida, Pergunta pergunta, Alternativa alternativaEscolhida, boolean acertou, boolean tempoEsgotado, Long tempoRespostaMs) {
         this.partida = partida;
         this.pergunta = pergunta;
         this.alternativaEscolhida = alternativaEscolhida;
         this.acertou = acertou;
         this.tempoEsgotado = tempoEsgotado;
+        this.tempoRespostaMs = tempoRespostaMs != null ? tempoRespostaMs : 0L;
         this.respondidaEm = LocalDateTime.now();
     }
 
@@ -97,6 +107,14 @@ public class RespostaPartida {
 
     public void setTempoEsgotado(boolean tempoEsgotado) {
         this.tempoEsgotado = tempoEsgotado;
+    }
+
+    public Long getTempoRespostaMs() {
+        return tempoRespostaMs;
+    }
+
+    public void setTempoRespostaMs(Long tempoRespostaMs) {
+        this.tempoRespostaMs = tempoRespostaMs;
     }
 
     public LocalDateTime getRespondidaEm() {

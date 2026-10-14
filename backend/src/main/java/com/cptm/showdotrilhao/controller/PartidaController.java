@@ -31,20 +31,22 @@ public class PartidaController {
     @PostMapping("/iniciar")
     @PreAuthorize("isAuthenticated()")
     @SecurityRequirement(name = "bearerAuth")
-    @Operation(summary = "Iniciar partida para jogador logado vinculando à sala")
+    @Operation(summary = "Endpoint descontinuado - utilizar fluxo oficial de sala /salas/{codigo}/entrar-jogador")
     public ResponseEntity<PartidaStatusResponse> iniciarJogador(
             @Valid @RequestBody IniciarPartidaRequest request,
             @AuthenticationPrincipal CustomUserDetails user) {
-        PartidaStatusResponse response = partidaService.iniciarPartidaJogador(request.codigoSala(), user.getId());
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        throw new com.cptm.showdotrilhao.exception.RegraNegocioException(
+                "O início avulso de partidas na sala foi bloqueado. Por favor, conecte-se pelo fluxo oficial da sala em /salas/" + request.codigoSala() + "/entrar-jogador"
+        );
     }
 
     @PostMapping("/visitante/iniciar")
-    @Operation(summary = "Iniciar partida para visitante sem login (código da sala + nome)")
+    @Operation(summary = "Endpoint descontinuado - utilizar fluxo oficial de sala /salas/{codigo}/entrar-visitante")
     public ResponseEntity<PartidaStatusResponse> iniciarVisitante(
             @Valid @RequestBody EntrarSalaVisitanteRequest request) {
-        PartidaStatusResponse response = partidaService.iniciarPartidaVisitante(request.codigoSala(), request.nomeVisitante());
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        throw new com.cptm.showdotrilhao.exception.RegraNegocioException(
+                "O início avulso de partidas na sala foi bloqueado. Por favor, conecte-se pelo fluxo oficial da sala em /salas/" + request.codigoSala() + "/entrar-visitante"
+        );
     }
 
     @GetMapping("/{id}/status")

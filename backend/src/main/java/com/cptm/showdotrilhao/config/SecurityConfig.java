@@ -54,6 +54,9 @@ public class SecurityConfig {
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/health", "/actuator/**").permitAll()
                         .requestMatchers("/salas/public/**").permitAll()
+                        .requestMatchers("/salas/{codigo}/entrar-visitante").permitAll()
+                        .requestMatchers("/salas/{codigo}/estado-jogador").permitAll()
+                        .requestMatchers("/salas/{codigo}/responder-simbolo").permitAll()
                         .requestMatchers("/partidas/visitante/**").permitAll()
                         .requestMatchers("/partidas/{id}/responder").permitAll()
                         .requestMatchers("/partidas/{id}/abandonar").permitAll()
@@ -62,7 +65,11 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
 
-                        // Rotas restritas para Apresentador e Admin
+                        // Rotas de controle da sala pelo Apresentador / Admin
+                        .requestMatchers("/salas/{codigo}/iniciar").hasAnyRole("APRESENTADOR", "ADMIN")
+                        .requestMatchers("/salas/{codigo}/revelar").hasAnyRole("APRESENTADOR", "ADMIN")
+                        .requestMatchers("/salas/{codigo}/proxima").hasAnyRole("APRESENTADOR", "ADMIN")
+                        .requestMatchers("/salas/{codigo}/estado-apresentador").hasAnyRole("APRESENTADOR", "ADMIN")
                         .requestMatchers("/salas/apresentador/**").hasAnyRole("APRESENTADOR", "ADMIN")
                         .requestMatchers("/perguntas/gestao/**").hasAnyRole("APRESENTADOR", "ADMIN")
 

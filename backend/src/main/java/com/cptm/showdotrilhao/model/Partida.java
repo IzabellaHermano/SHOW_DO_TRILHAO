@@ -34,8 +34,14 @@ public class Partida {
     @Column(name = "pergunta_atual_index", nullable = false)
     private int perguntaAtualIndex = 0; // 0 a 9
 
-    @Column(name = "perguntas_ids", nullable = false, length = 200)
+    @Column(name = "perguntas_ids", nullable = true, length = 200)
     private String perguntasIds; // Lista com IDs ordenados: ex "1,2,3,4,5,6,7,8,9,10"
+
+    @Column(name = "token_sessao", length = 64, unique = true)
+    private String tokenSessao;
+
+    @Column(name = "tempo_total_resposta_ms", nullable = false)
+    private long tempoTotalRespostaMs = 0;
 
     @OneToMany(mappedBy = "partida", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("ordem ASC")
@@ -62,6 +68,7 @@ public class Partida {
         this.pontuacaoFinal = 0;
         this.nivelAlcancado = 0;
         this.perguntaAtualIndex = 0;
+        this.tempoTotalRespostaMs = 0;
         this.status = StatusPartida.EM_ANDAMENTO;
         this.iniciadaEm = LocalDateTime.now();
     }
@@ -179,5 +186,25 @@ public class Partida {
 
     public void setFinalizadaEm(LocalDateTime finalizadaEm) {
         this.finalizadaEm = finalizadaEm;
+    }
+
+    public String getTokenSessao() {
+        return tokenSessao;
+    }
+
+    public void setTokenSessao(String tokenSessao) {
+        this.tokenSessao = tokenSessao;
+    }
+
+    public long getTempoTotalRespostaMs() {
+        return tempoTotalRespostaMs;
+    }
+
+    public void setTempoTotalRespostaMs(long tempoTotalRespostaMs) {
+        this.tempoTotalRespostaMs = tempoTotalRespostaMs;
+    }
+
+    public void adicionarTempoRespostaMs(long tempoMs) {
+        this.tempoTotalRespostaMs += Math.max(0, tempoMs);
     }
 }
