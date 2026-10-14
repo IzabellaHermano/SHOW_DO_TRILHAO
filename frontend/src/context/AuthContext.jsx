@@ -3,8 +3,27 @@ import { createContext, useContext, useState, useEffect } from 'react'
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => localStorage.getItem('show_trilhao_token') || null)
+  const [token, setToken] = useState(() => {
+    const searchParams = new URLSearchParams(window.location.search)
+    const urlToken = searchParams.get('auth_token')
+    if (urlToken) {
+      localStorage.setItem('show_trilhao_token', urlToken)
+      return urlToken
+    }
+    return localStorage.getItem('show_trilhao_token') || null
+  })
   const [user, setUser] = useState(() => {
+    const searchParams = new URLSearchParams(window.location.search)
+    const urlUser = searchParams.get('auth_user')
+    if (urlUser) {
+      try {
+        const parsed = JSON.parse(decodeURIComponent(urlUser))
+        localStorage.setItem('show_trilhao_user', JSON.stringify(parsed))
+        return parsed
+      } catch {
+        // ignora erro de parse
+      }
+    }
     const savedUser = localStorage.getItem('show_trilhao_user')
     try {
       return savedUser ? JSON.parse(savedUser) : null
