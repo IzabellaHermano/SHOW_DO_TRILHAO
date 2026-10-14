@@ -19,12 +19,14 @@ function App() {
       <Route element={<Layout />}>
         {/* Rotas Públicas */}
         <Route path="/" element={<Home />} />
+        <Route path="/sala/:codigo" element={<Home />} />
         <Route path="/entrar" element={<Home />} />
         <Route path="/entrar/:codigo" element={<Home />} />
         <Route path="/login" element={<Login />} />
         <Route path="/ranking" element={<Ranking />} />
         <Route path="/jogo" element={<Jogo />} />
         <Route path="/jogo/:id" element={<Jogo />} />
+        <Route path="/jogo/sala/:codigo" element={<Jogo />} />
 
         {/* Rotas Protegidas (Exigem autenticação ou perfil específico) */}
         <Route element={<PrivateRoute requiredRole="ROLE_APRESENTADOR" />}>

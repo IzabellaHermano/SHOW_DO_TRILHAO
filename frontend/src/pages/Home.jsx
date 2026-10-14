@@ -65,7 +65,7 @@ export default function Home() {
 
     setCarregando(true)
     try {
-      // 1. Verifica se a sala existe e está ativa
+      // 1. Verifica se a sala existe, está ativa e aberta para embarque
       try {
         const infoSala = await salaService.verificarSala(codLimpo)
         if (!infoSala.ativa) {
@@ -73,9 +73,18 @@ export default function Home() {
           setCarregando(false)
           return
         }
+        if (infoSala.status === 'EM_ANDAMENTO') {
+          setErro('A partida nesta sala já está em andamento. Aguarde o encerramento da viagem para participar da próxima partida!')
+          setCarregando(false)
+          return
+        }
+        if (infoSala.status === 'FINALIZADA') {
+          setErro('Esta sala já foi encerrada pelo apresentador.')
+          setCarregando(false)
+          return
+        }
       } catch (errCheck) {
         console.warn('Verificação de sala:', errCheck)
-        // Se a verificação falhar com 404, avisa imediatamente
         if (errCheck.response?.status === 404) {
           setErro(`A sala ${codLimpo} não foi encontrada. Confira as letras e números.`)
           setCarregando(false)
@@ -83,19 +92,21 @@ export default function Home() {
         }
       }
 
-      // 2. Inicia a partida como Jogador autenticado ou Visitante
-      let partidaCriada = null
+      // 2. Embarca na sala coletiva como Jogador autenticado ou Visitante
+      let entrada = null
       if (isAuthenticated) {
-        partidaCriada = await partidaService.iniciarJogador(codLimpo)
+        entrada = await salaService.entrarJogador(codLimpo)
       } else {
-        partidaCriada = await partidaService.iniciarVisitante(codLimpo, apelido.trim())
+        entrada = await salaService.entrarVisitante(codLimpo, apelido.trim())
       }
 
-      toast.success('Embarque confirmado! Você entrou no Show.', 'Tudo Pronto')
-      navigate(`/jogo/${partidaCriada.id}`, {
+      localStorage.setItem('show_trilhao_session_' + codLimpo, entrada.tokenSessao)
+      toast.success('Embarque confirmado! Você está conectado ao Show.', 'Tudo Pronto')
+      navigate('/jogo', {
         state: {
           codigoSala: codLimpo,
-          nomeJogador: apelido.trim(),
+          tokenSessao: entrada.tokenSessao,
+          nomeJogador: entrada.nomeJogador || apelido.trim(),
         },
       })
     } catch (err) {

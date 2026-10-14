@@ -125,18 +125,21 @@ O Vite iniciará o front-end em `http://localhost:5173`.
      }
    }
    ```
-4. **Configure a URL do Render em Produção:**
+4. **Configure as URLs de Produção:**
    Edite o arquivo `frontend/.env.production`:
    ```env
    VITE_API_URL=https://show-do-trilhao-backend.onrender.com/api
+   VITE_PUBLIC_URL=https://seu-projeto-firebase-id.web.app
    ```
+   > ⚠️ **ATENÇÃO AO QR CODE E LINKS DE SALA:** A variável `VITE_PUBLIC_URL` define a URL pública base utilizada para gerar o QR Code no telão do Apresentador e o link compartilhado com os jogadores. Certifique-se de preencher com o seu domínio real do Firebase (`https://seu-projeto-firebase-id.web.app`) para evitar gerar QR Codes apontando para `localhost` em produção!
+
 5. **Gere o Build e Publique:**
    ```powershell
    cd frontend
    npm run build
    firebase deploy --only hosting
    ```
-   O Firebase Hosting disponibilizará o site com certificado SSL automático em `https://seu-projeto-firebase-id.web.app`.
+   O Firebase Hosting disponibilizará o site com certificado SSL automático em `https://seu-projeto-firebase-id.web.app`. O arquivo `firebase.json` já conta com a regra de rewrite SPA (`**` -> `/index.html`) para que links diretos como `/sala/CPTM-XXXX` funcionem no reload.
 
 ---
 

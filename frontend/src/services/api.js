@@ -99,6 +99,47 @@ export const salaService = {
     const response = await api.patch(`/salas/apresentador/${id}/alternar-status`)
     return response.data
   },
+  entrarVisitante: async (codigo, nomeVisitante) => {
+    const response = await api.post(`/salas/${codigo}/entrar-visitante`, {
+      codigoSala: codigo,
+      nomeVisitante,
+    })
+    return response.data
+  },
+  entrarJogador: async (codigo) => {
+    const response = await api.post(`/salas/${codigo}/entrar-jogador`)
+    return response.data
+  },
+  iniciarJogo: async (codigo) => {
+    const response = await api.post(`/salas/${codigo}/iniciar`)
+    return response.data
+  },
+  obterEstadoApresentador: async (codigo) => {
+    const response = await api.get(`/salas/${codigo}/estado-apresentador`)
+    return response.data
+  },
+  revelarResposta: async (codigo) => {
+    const response = await api.post(`/salas/${codigo}/revelar`)
+    return response.data
+  },
+  proximaPergunta: async (codigo) => {
+    const response = await api.post(`/salas/${codigo}/proxima`)
+    return response.data
+  },
+  obterEstadoJogador: async (codigo, tokenSessao) => {
+    const headers = tokenSessao ? { 'X-Session-Token': tokenSessao } : {}
+    const response = await api.get(`/salas/${codigo}/estado-jogador`, { headers })
+    return response.data
+  },
+  responderSimbolo: async (codigo, tokenSessao, simboloNumero) => {
+    const headers = tokenSessao ? { 'X-Session-Token': tokenSessao } : {}
+    const response = await api.post(
+      `/salas/${codigo}/responder-simbolo`,
+      { simboloNumero },
+      { headers }
+    )
+    return response.data
+  },
 }
 
 export const perguntaService = {
