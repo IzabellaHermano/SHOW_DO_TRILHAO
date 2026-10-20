@@ -1,5 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { salaService, perguntaService, rankingService } from '../services/api'
 import { useAuth } from '../context/AuthContext'
@@ -12,32 +11,26 @@ import {
   RefreshCw,
   Power,
   HelpCircle,
-  Edit2,
-  Trash2,
   Save,
   Tv,
   Play,
   ArrowLeft,
   CheckCircle,
-  XCircle,
   Sparkles,
-  Award,
   ChevronRight,
-  Eye,
-  RotateCcw,
-  Trophy
+  Eye
 } from 'lucide-react'
 import CptmLogo from '../components/CptmLogo'
 import GameLogo from '../components/GameLogo'
-import GameTitle from '../components/GameTitle'
 import PlayerPill from '../components/PlayerPill'
 import GameModal from '../components/GameModal'
+import ModalCriarSala from '../components/ModalCriarSala'
 import Podium from '../components/Podium'
 import GameButton from '../components/GameButton'
 import GameCard from '../components/GameCard'
 import AlternativaItem from '../components/AlternativaItem'
 
-const VALORES_SUGERIDOS_POR_NIVEL = {
+const PREMIOS_POR_NIVEL = {
   1: 1000,
   2: 5000,
   3: 10000,
@@ -52,7 +45,6 @@ const VALORES_SUGERIDOS_POR_NIVEL = {
 
 export default function Apresentador() {
   const { user } = useAuth()
-  const navigate = useNavigate()
   const toast = useToast()
 
   const [abaAtiva, setAbaAtiva] = useState('salas') // 'salas' | 'perguntas'
@@ -820,49 +812,14 @@ export default function Apresentador() {
       )}
 
       {/* MODAL: CRIAR NOVA SALA */}
-      <GameModal
+      <ModalCriarSala
         isOpen={modalNovaSalaAberto}
         onClose={() => setModalNovaSalaAberto(false)}
-        title="Criar Sala de Jogo"
-      >
-        <form onSubmit={handleCriarSala} className="game-form">
-          <div className="form-group">
-            <label htmlFor="nome-sala-input">Nome ou Identificação da Sala:</label>
-            <input
-              id="nome-sala-input"
-              type="text"
-              value={nomeNovaSala}
-              onChange={(e) => setNomeNovaSala(e.target.value)}
-              placeholder="Ex: Expresso Luz - Turma das 14h"
-              className="input-cptm"
-              maxLength={80}
-              required
-              autoFocus
-            />
-            <span className="form-hint">
-              O backend irá gerar automaticamente um código exclusivo de embarque (ex: CPTM-ABCD).
-            </span>
-          </div>
-
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.25rem', flexWrap: 'wrap' }}>
-            <GameButton
-              type="button"
-              variant="secondary"
-              onClick={() => setModalNovaSalaAberto(false)}
-            >
-              Cancelar
-            </GameButton>
-            <GameButton
-              type="submit"
-              variant="primary"
-              disabled={criandoSala || !nomeNovaSala.trim()}
-              icon={<Save size={16} />}
-            >
-              {criandoSala ? 'Criando...' : 'Confirmar e Abrir Telão'}
-            </GameButton>
-          </div>
-        </form>
-      </GameModal>
+        nomeSala={nomeNovaSala}
+        setNomeSala={setNomeNovaSala}
+        onSubmit={handleCriarSala}
+        loading={criandoSala}
+      />
 
       {/* MODAL: NOVA PERGUNTA PERSONALIZADA */}
       <GameModal
