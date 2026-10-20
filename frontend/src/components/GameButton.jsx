@@ -47,7 +47,14 @@ export default function GameButton({
     xl: 'game-btn-xl',
   }[size] || 'game-btn-md'
 
-  const blockClass = block ? 'game-btn-block' : ''
+  const renderIcon = (iconProp, isRight = false) => {
+    if (!iconProp) return null
+    if (React.isValidElement(iconProp)) {
+      return <span className={isRight ? 'game-btn-icon-right' : 'game-btn-icon'} aria-hidden="true">{iconProp}</span>
+    }
+    const IconComp = iconProp
+    return <IconComp size={size === 'sm' ? 16 : size === 'xl' ? 24 : 20} className={isRight ? 'game-btn-icon-right' : 'game-btn-icon'} aria-hidden="true" />
+  }
 
   return (
     <button
@@ -60,9 +67,9 @@ export default function GameButton({
       className={`game-btn ${variantClass} ${sizeClass} ${blockClass} ${className}`.trim()}
       {...props}
     >
-      {Icon && <Icon size={size === 'sm' ? 16 : size === 'xl' ? 24 : 20} className="game-btn-icon" aria-hidden="true" />}
+      {renderIcon(icon, false)}
       <span className="game-btn-text">{loading ? 'Aguarde...' : children}</span>
-      {IconRight && <IconRight size={size === 'sm' ? 16 : size === 'xl' ? 24 : 20} className="game-btn-icon-right" aria-hidden="true" />}
+      {renderIcon(iconRight, true)}
     </button>
   )
 }
