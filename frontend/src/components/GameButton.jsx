@@ -20,8 +20,8 @@ export default function GameButton({
   variant = 'primary',
   size = 'md',
   block = false,
-  icon: Icon = null,
-  iconRight: IconRight = null,
+  icon = null,
+  iconRight = null,
   disabled = false,
   loading = false,
   className = '',
@@ -46,6 +46,8 @@ export default function GameButton({
     lg: 'game-btn-lg',
     xl: 'game-btn-xl',
   }[size] || 'game-btn-md'
+
+  const blockClass = block ? 'game-btn-block' : ''
 
   const renderIcon = (iconProp, isRight = false) => {
     if (!iconProp) return null

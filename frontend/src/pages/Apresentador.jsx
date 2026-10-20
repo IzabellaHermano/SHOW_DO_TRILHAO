@@ -260,6 +260,40 @@ export default function Apresentador() {
     toast.success('Link da sala copiado! Compartilhe com os participantes.', 'Link Copiado')
   }
 
+  const handleSalvarPergunta = async (e) => {
+    e.preventDefault()
+    if (!enunciado.trim() || !alternativa1.trim() || !alternativa2.trim() || !alternativa3.trim() || !alternativa4.trim()) {
+      toast.warning('Preencha o enunciado e as 4 alternativas.')
+      return
+    }
+
+    setSalvandoPergunta(true)
+    try {
+      const payload = {
+        enunciado: enunciado.trim(),
+        nivelDificuldade: Number(nivelDificuldade),
+        valorPremio: PREMIOS_POR_NIVEL[Number(nivelDificuldade)] || Number(valorPremio),
+        explicacao: explicacao.trim(),
+        alternativas: [
+          { numero: 1, texto: alternativa1.trim(), correta: corretaNumero === 1 },
+          { numero: 2, texto: alternativa2.trim(), correta: corretaNumero === 2 },
+          { numero: 3, texto: alternativa3.trim(), correta: corretaNumero === 3 },
+          { numero: 4, texto: alternativa4.trim(), correta: corretaNumero === 4 },
+        ],
+      }
+
+      await perguntaService.cadastrar(payload)
+      toast.success('Pergunta cadastrada com sucesso no acervo oficial!')
+      setModalPerguntaAberto(false)
+      carregarPerguntas()
+    } catch (err) {
+      console.error('Erro ao cadastrar pergunta:', err)
+      toast.error(err.response?.data?.message || 'Falha ao salvar a pergunta.')
+    } finally {
+      setSalvandoPergunta(false)
+    }
+  }
+
   // ========================================================
   // MODO 1: TELÃO EM TEMPO REAL (LOBBY, PERGUNTA, REVELAÇÃO, PÓDIO)
   // ========================================================
@@ -707,14 +741,36 @@ export default function Apresentador() {
                 Total de {perguntas.length} perguntas cadastradas de níveis 1 a 10.
               </p>
             </div>
-            <GameButton
-              variant="secondary"
-              size="sm"
-              onClick={carregarPerguntas}
-              icon={<RefreshCw size={16} className={carregandoPerguntas ? 'spin' : ''} />}
-            >
-              Atualizar
-            </GameButton>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <GameButton
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  setEditandoId(null)
+                  setEnunciado('')
+                  setNivelDificuldade(1)
+                  setValorPremio(1000)
+                  setExplicacao('')
+                  setAlternativa1('')
+                  setAlternativa2('')
+                  setAlternativa3('')
+                  setAlternativa4('')
+                  setCorretaNumero(1)
+                  setModalPerguntaAberto(true)
+                }}
+                icon={PlusCircle}
+              >
+                Nova Pergunta
+              </GameButton>
+              <GameButton
+                variant="secondary"
+                size="sm"
+                onClick={carregarPerguntas}
+                icon={<RefreshCw size={16} className={carregandoPerguntas ? 'spin' : ''} />}
+              >
+                Atualizar
+              </GameButton>
+            </div>
           </div>
 
           <div className="questions-filter-strip">
@@ -803,6 +859,124 @@ export default function Apresentador() {
               icon={<Save size={16} />}
             >
               {criandoSala ? 'Criando...' : 'Confirmar e Abrir Telão'}
+            </GameButton>
+          </div>
+        </form>
+      </GameModal>
+
+      {/* MODAL: NOVA PERGUNTA PERSONALIZADA */}
+      <GameModal
+        isOpen={modalPerguntaAberto}
+        onClose={() => setModalPerguntaAberto(false)}
+        title="Cadastrar Nova Pergunta no Quiz"
+        icon={PlusCircle}
+      >
+        <form onSubmit={handleSalvarPergunta} className="game-form">
+          <div className="form-group">
+            <label htmlFor="enunciado-input">Enunciado da Pergunta:</label>
+            <textarea
+              id="enunciado-input"
+              value={enunciado}
+              onChange={(e) => setEnunciado(e.target.value)}
+              placeholder="Ex: Qual foi a primeira estação inaugurada pela São Paulo Railway em 1867?"
+              className="input-cptm"
+              rows={3}
+              required
+            />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <div className="form-group">
+              <label htmlFor="nivel-select">Nível (1 a 10):</label>
+              <select
+                id="nivel-select"
+                value={nivelDificuldade}
+                onChange={(e) => {
+                  const n = Number(e.target.value)
+                  setNivelDificuldade(n)
+                  setValorPremio(PREMIOS_POR_NIVEL[n] || 1000)
+                }}
+                className="input-cptm"
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => (
+                  <option key={n} value={n}>Nível {n}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label>Valor do Prêmio:</label>
+              <input
+                type="text"
+                value={formatarMoeda(valorPremio)}
+                disabled
+                className="input-cptm"
+                style={{ opacity: 0.85, fontWeight: 700 }}
+              />
+            </div>
+          </div>
+
+          <div style={{ marginTop: '0.5rem' }}>
+            <label style={{ display: 'block', marginBottom: '0.35rem', fontSize: '0.9rem', fontWeight: 700 }}>
+              Alternativas (marque a correta):
+            </label>
+            {[
+              { num: 1, val: alternativa1, set: setAlternativa1 },
+              { num: 2, val: alternativa2, set: setAlternativa2 },
+              { num: 3, val: alternativa3, set: setAlternativa3 },
+              { num: 4, val: alternativa4, set: setAlternativa4 },
+            ].map(({ num, val, set }) => (
+              <div key={num} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <input
+                  type="radio"
+                  name="corretaNumero"
+                  checked={corretaNumero === num}
+                  onChange={() => setCorretaNumero(num)}
+                  id={`radio-alt-${num}`}
+                  title="Marcar como alternativa correta"
+                  style={{ accentColor: '#10B981', width: 20, height: 20, cursor: 'pointer' }}
+                />
+                <span style={{ fontWeight: 800, width: '24px' }}>{num}.</span>
+                <input
+                  type="text"
+                  value={val}
+                  onChange={(e) => set(e.target.value)}
+                  placeholder={`Texto da alternativa ${num}`}
+                  className="input-cptm"
+                  style={{ flex: 1 }}
+                  required
+                />
+              </div>
+            ))}
+          </div>
+
+          <div className="form-group" style={{ marginTop: '0.75rem' }}>
+            <label htmlFor="explicacao-input">Curiosidade Ferroviária (opcional):</label>
+            <input
+              id="explicacao-input"
+              type="text"
+              value={explicacao}
+              onChange={(e) => setExplicacao(e.target.value)}
+              placeholder="Ex: A estação da Luz foi construída com tijolos importados da Inglaterra."
+              className="input-cptm"
+            />
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.25rem', flexWrap: 'wrap' }}>
+            <GameButton
+              type="button"
+              variant="secondary"
+              onClick={() => setModalPerguntaAberto(false)}
+            >
+              Cancelar
+            </GameButton>
+            <GameButton
+              type="submit"
+              variant="primary"
+              disabled={salvandoPergunta}
+              icon={<Save size={16} />}
+            >
+              {salvandoPergunta ? 'Salvando...' : 'Salvar Pergunta'}
             </GameButton>
           </div>
         </form>

@@ -30,7 +30,7 @@ services:
       - key: APRESENTADOR_PASSWORD
         sync: false
       - key: CORS_ALLOWED_ORIGINS
-        value: https://show-do-trilhao.web.app,https://show-do-trilhao.firebaseapp.com
+        value: https://show-do-trilhao-6a86a.web.app,https://show-do-trilhao-6a86a.firebaseapp.com,https://show-do-trilhao.web.app,https://show-do-trilhao.firebaseapp.com
       - key: SWAGGER_ENABLED
         value: false
 

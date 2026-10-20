@@ -1,7 +1,8 @@
 import axios from 'axios'
 
 // A URL da API vem estritamente das variáveis de ambiente (.env.development / .env.production)
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api'
+const configuredUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').trim().replace(/\/+$/, '')
+const API_URL = configuredUrl.endsWith('/api') ? configuredUrl : `${configuredUrl}/api`
 
 export const api = axios.create({
   baseURL: API_URL,

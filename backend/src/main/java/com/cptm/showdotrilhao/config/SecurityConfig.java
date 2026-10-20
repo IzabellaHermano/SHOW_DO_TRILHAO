@@ -93,7 +93,7 @@ public class SecurityConfig {
             // Em produção, rigorosamente apenas as origens explicitamente configuradas (Firebase)
             if (allowedOriginsStr != null && !allowedOriginsStr.isBlank()) {
                 for (String origin : allowedOriginsStr.split(",")) {
-                    String trimmed = origin.trim();
+                    String trimmed = origin.trim().replaceAll("/+$", "");
                     if (!trimmed.isEmpty() && !patterns.contains(trimmed)) {
                         patterns.add(trimmed);
                     }
