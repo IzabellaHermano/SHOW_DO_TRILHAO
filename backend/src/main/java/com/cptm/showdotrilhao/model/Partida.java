@@ -64,7 +64,7 @@ public class Partida {
         this.sala = sala;
         this.usuario = usuario;
         this.nomeVisitante = nomeVisitante;
-        this.perguntasIds = perguntasIds;
+        this.perguntasIds = perguntasIds != null ? perguntasIds : "";
         this.pontuacaoFinal = 0;
         this.nivelAlcancado = 0;
         this.perguntaAtualIndex = 0;
@@ -77,6 +77,9 @@ public class Partida {
     public void prePersist() {
         if (this.iniciadaEm == null) {
             this.iniciadaEm = LocalDateTime.now();
+        }
+        if (this.perguntasIds == null) {
+            this.perguntasIds = "";
         }
     }
 

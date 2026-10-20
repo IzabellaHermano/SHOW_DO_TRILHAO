@@ -24,7 +24,7 @@ class FlywayMigrationTest {
                 .load();
 
         var result = flyway.migrate();
-        assertTrue(result.migrationsExecuted >= 1, "Pelo menos a migração V1 deve ser executada");
+        assertTrue(result.migrationsExecuted >= 3, "As migrações V1, V2 e V3 devem ser executadas com sucesso");
         assertEquals(0, flyway.validateWithResult().invalidMigrations.size(), "Todas as migrações devem ser válidas");
     }
 }
