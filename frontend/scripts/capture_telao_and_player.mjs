@@ -80,9 +80,10 @@ async function captureEvidence() {
   const playerToken = playerRes.data.token;
 
   // Jogador 1 entra na sala
-  await axios.post(`${API}/salas/${codigo}/entrar-jogador`, {}, {
+  const playerEntryRes = await axios.post(`${API}/salas/${codigo}/entrar-jogador`, {}, {
     headers: { Authorization: `Bearer ${playerToken}` }
   });
+  const playerSessionToken = playerEntryRes.data.tokenSessao;
 
   // Visitante entra na sala
   const visitRes = await axios.post(`${API}/salas/${codigo}/entrar-visitante`, {
@@ -102,23 +103,18 @@ async function captureEvidence() {
   const pageApresentador = await browser.newPage();
   await pageApresentador.setViewport({ width: 1280, height: 800 });
   
-  // Injeta token do apresentador no localStorage
-  await pageApresentador.goto('http://localhost:5174/', { waitUntil: 'domcontentloaded' });
-  await pageApresentador.evaluate((token, user) => {
-    localStorage.setItem('show_trilhao_token', token);
-    localStorage.setItem('show_trilhao_user', JSON.stringify(user));
-  }, apresToken, apresRes.data);
+  pageApresentador.on('console', msg => console.log('APRES LOG:', msg.text()));
+  pageApresentador.on('pageerror', err => console.log('APRES ERROR:', err.message));
 
-  // Acessa telão da sala
-  await pageApresentador.goto(`http://localhost:5174/apresentador`, { waitUntil: 'networkidle2' });
-  await new Promise(r => setTimeout(r, 1200));
+  // Acessa painel do apresentador passando credenciais na URL
+  const apresUrl = `http://localhost:5174/apresentador?auth_token=${apresToken}&auth_user=${encodeURIComponent(JSON.stringify(apresRes.data))}`;
+  console.log('Navegando para painel do apresentador...');
+  await pageApresentador.goto(apresUrl, { waitUntil: 'networkidle2' });
+  console.log('URL atual:', pageApresentador.url());
 
-  // Clica no card da sala para abrir o telão ao vivo
-  await pageApresentador.evaluate((cod) => {
-    const btn = Array.from(document.querySelectorAll('button')).find(b => b.innerText.includes('Abrir Telão') || b.innerText.includes('Telão'));
-    if (btn) btn.click();
-  }, codigo);
-  await new Promise(r => setTimeout(r, 1500));
+  await pageApresentador.waitForSelector(`#btn-abrir-telao-${codigo}`, { timeout: 10000 });
+  await pageApresentador.click(`#btn-abrir-telao-${codigo}`);
+  await new Promise(r => setTimeout(r, 2000));
 
   const telaoScreenshotPath = path.join(ARTIFACT_DIR, '01_telao_apresentador_ao_vivo.png');
   await pageApresentador.screenshot({ path: telaoScreenshotPath, fullPage: false });
@@ -126,19 +122,20 @@ async function captureEvidence() {
 
   // 3. Captura CELULAR DO JOGADOR (390x844 iPhone 14)
   const pageJogador = await browser.newPage();
-  await pageJogador.setViewport({ width: 390, height: 844 });
+  await pageJogador.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
+  pageJogador.on('console', msg => console.log('JOGADOR LOG:', msg.text()));
   
-  // Injeta token e código de sala
-  await pageJogador.goto('http://localhost:5174/', { waitUntil: 'domcontentloaded' });
-  await pageJogador.evaluate((cod, token, user) => {
-    localStorage.setItem('show_trilhao_token', token);
-    localStorage.setItem('show_trilhao_user', JSON.stringify(user));
-    localStorage.setItem(`show_trilhao_session_${cod}`, token);
+  await pageJogador.evaluateOnNewDocument((tok, usr, cod, sessTok) => {
+    localStorage.setItem('show_trilhao_token', tok);
+    localStorage.setItem('show_trilhao_user', JSON.stringify(usr));
+    localStorage.setItem(`show_trilhao_session_${cod}`, sessTok);
     sessionStorage.setItem('show_trilhao_current_sala', cod);
-  }, codigo, playerToken, playerRes.data);
+  }, playerToken, playerRes.data, codigo, playerSessionToken);
 
-  await pageJogador.goto(`http://localhost:5174/jogo/sala/${codigo}`, { waitUntil: 'networkidle2' });
-  await new Promise(r => setTimeout(r, 1500));
+  const playerUrl = `http://localhost:5174/jogo/sala/${codigo}?auth_token=${playerToken}&auth_user=${encodeURIComponent(JSON.stringify(playerRes.data))}`;
+  console.log('Navegando jogador...');
+  await pageJogador.goto(playerUrl, { waitUntil: 'networkidle2' });
+  await new Promise(r => setTimeout(r, 2000));
 
   const jogadorScreenshotPath = path.join(ARTIFACT_DIR, '02_celular_jogador_simbolos.png');
   await pageJogador.screenshot({ path: jogadorScreenshotPath, fullPage: false });
@@ -146,15 +143,17 @@ async function captureEvidence() {
 
   // 4. Captura CELULAR DO VISITANTE (360x740)
   const pageVisitante = await browser.newPage();
-  await pageVisitante.setViewport({ width: 360, height: 740 });
-  await pageVisitante.goto('http://localhost:5174/', { waitUntil: 'domcontentloaded' });
-  await pageVisitante.evaluate((cod, token) => {
-    localStorage.setItem(`show_trilhao_session_${cod}`, token);
+  await pageVisitante.setViewport({ width: 360, height: 740, isMobile: true, hasTouch: true });
+  pageVisitante.on('console', msg => console.log('VISITANTE LOG:', msg.text()));
+
+  await pageVisitante.evaluateOnNewDocument((cod, sessTok) => {
+    localStorage.setItem(`show_trilhao_session_${cod}`, sessTok);
     sessionStorage.setItem('show_trilhao_current_sala', cod);
   }, codigo, visitToken);
 
+  console.log('Navegando visitante...');
   await pageVisitante.goto(`http://localhost:5174/jogo/sala/${codigo}`, { waitUntil: 'networkidle2' });
-  await new Promise(r => setTimeout(r, 1500));
+  await new Promise(r => setTimeout(r, 2000));
 
   const visitanteScreenshotPath = path.join(ARTIFACT_DIR, '03_celular_visitante_360px.png');
   await pageVisitante.screenshot({ path: visitanteScreenshotPath, fullPage: false });
