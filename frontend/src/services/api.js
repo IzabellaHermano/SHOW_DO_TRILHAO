@@ -1,8 +1,12 @@
 import axios from 'axios'
 
-// A URL da API vem estritamente das variáveis de ambiente (.env.development / .env.production)
-const configuredUrl = (import.meta.env.VITE_API_URL || 'http://localhost:8080/api').trim().replace(/\/+$/, '')
-const API_URL = configuredUrl.endsWith('/api') ? configuredUrl : `${configuredUrl}/api`
+// A URL da API respeita o ambiente de execução: se rodando em localhost/127.0.0.1, consome a API local; em produção, consome o Render
+const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+const configuredEnvUrl = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '')
+const effectiveUrl = isLocalhost 
+  ? 'http://localhost:8080/api' 
+  : (configuredEnvUrl || 'https://show-do-trilhao-backend.onrender.com/api')
+const API_URL = effectiveUrl.endsWith('/api') ? effectiveUrl : `${effectiveUrl}/api`
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -12,10 +16,14 @@ export const api = axios.create({
   },
 })
 
-// Interceptador para adicionar o token JWT nas requisições autenticadas
+// Interceptador para adicionar o token JWT nas requisições autenticadas (localStorage / sessionStorage)
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('show_trilhao_token')
+    const token =
+      localStorage.getItem('show_trilhao_token') ||
+      localStorage.getItem('token') ||
+      sessionStorage.getItem('show_trilhao_token') ||
+      sessionStorage.getItem('token')
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -26,7 +34,7 @@ api.interceptors.request.use(
 
 let isCurrentlyOffline = false
 
-// Interceptador de resposta para tratar erros comuns e cold start do Render
+// Interceptador de resposta para tratar erros comuns, autenticação e cold start do Render
 api.interceptors.response.use(
   (response) => {
     // Se respondeu com sucesso após uma perda de conexão, notifica reconexão
@@ -41,10 +49,27 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
 
-    if (error.response && error.response.status === 401) {
-      // Token inválido ou expirado
-      localStorage.removeItem('show_trilhao_token')
-      localStorage.removeItem('show_trilhao_user')
+    if (error.response && (error.response.status === 401 || error.response.status === 403)) {
+      // Token inválido, expirado ou permissão negada
+      const isAuthEndpoint = originalRequest?.url?.includes('/auth/')
+      if (!isAuthEndpoint) {
+        localStorage.removeItem('show_trilhao_token')
+        localStorage.removeItem('show_trilhao_user')
+        localStorage.removeItem('token')
+        sessionStorage.removeItem('show_trilhao_token')
+        sessionStorage.removeItem('show_trilhao_user')
+        sessionStorage.removeItem('token')
+
+        window.dispatchEvent(new CustomEvent('auth-session-expired'))
+
+        if (
+          typeof window !== 'undefined' &&
+          !window.location.pathname.includes('/login') &&
+          !window.location.pathname.includes('/sala/')
+        ) {
+          window.location.href = '/login'
+        }
+      }
     }
 
     // Erros de rede ou timeout indicam desconexão ou cold start

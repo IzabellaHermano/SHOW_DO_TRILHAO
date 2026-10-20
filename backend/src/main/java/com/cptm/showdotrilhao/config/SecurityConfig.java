@@ -1,6 +1,7 @@
 package com.cptm.showdotrilhao.config;
 
 import com.cptm.showdotrilhao.security.JwtAuthenticationFilter;
+import org.springframework.http.HttpMethod;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -50,7 +51,10 @@ public class SecurityConfig {
                 .headers(headers -> headers.frameOptions(HeadersConfigurer.FrameOptionsConfig::disable))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Rotas públicas (Auth, Swagger, H2 console, Visitante, Rankings, Health e verificação de sala)
+                        // 1. Permite explicitamente requisições preflight HTTP OPTIONS (CORS)
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+
+                        // 2. Rotas públicas (Auth, Swagger, H2 console, Visitante, Rankings, Health e verificação de sala)
                         .requestMatchers("/auth/**").permitAll()
                         .requestMatchers("/health", "/actuator/**").permitAll()
                         .requestMatchers("/salas/public/**").permitAll()
@@ -65,18 +69,19 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
 
-                        // Rotas de controle da sala pelo Apresentador / Admin
+                        // 3. Rotas de controle da sala pelo Apresentador / Admin
                         .requestMatchers("/salas/{codigo}/iniciar").hasAnyRole("APRESENTADOR", "ADMIN")
                         .requestMatchers("/salas/{codigo}/revelar").hasAnyRole("APRESENTADOR", "ADMIN")
                         .requestMatchers("/salas/{codigo}/proxima").hasAnyRole("APRESENTADOR", "ADMIN")
                         .requestMatchers("/salas/{codigo}/estado-apresentador").hasAnyRole("APRESENTADOR", "ADMIN")
-                        .requestMatchers("/salas/apresentador/**").hasAnyRole("APRESENTADOR", "ADMIN")
-                        .requestMatchers("/perguntas/gestao/**").hasAnyRole("APRESENTADOR", "ADMIN")
+                        .requestMatchers("/salas/{codigo}/perguntas/**").hasAnyRole("APRESENTADOR", "ADMIN")
+                        .requestMatchers("/salas/apresentador", "/salas/apresentador/**").hasAnyRole("APRESENTADOR", "ADMIN")
+                        .requestMatchers("/perguntas/gestao", "/perguntas/gestao/**").hasAnyRole("APRESENTADOR", "ADMIN")
 
-                        // Rotas exclusivas de Admin
+                        // 4. Rotas exclusivas de Admin
                         .requestMatchers("/usuarios/**").hasRole("ADMIN")
 
-                        // Demais rotas exigem autenticação
+                        // 5. Demais rotas exigem autenticação
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);

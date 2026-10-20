@@ -6,8 +6,10 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 
 public class CustomUserDetails implements UserDetails {
 
@@ -24,7 +26,16 @@ public class CustomUserDetails implements UserDetails {
         this.email = usuario.getEmail();
         this.senha = usuario.getSenha();
         this.role = usuario.getRole();
-        this.authorities = Collections.singletonList(new SimpleGrantedAuthority(usuario.getRole().name()));
+
+        List<SimpleGrantedAuthority> auths = new ArrayList<>();
+        String roleName = usuario.getRole() != null ? usuario.getRole().name() : "ROLE_JOGADOR";
+        auths.add(new SimpleGrantedAuthority(roleName));
+        if (roleName.startsWith("ROLE_")) {
+            auths.add(new SimpleGrantedAuthority(roleName.substring(5)));
+        } else {
+            auths.add(new SimpleGrantedAuthority("ROLE_" + roleName));
+        }
+        this.authorities = Collections.unmodifiableList(auths);
     }
 
     public Long getId() {

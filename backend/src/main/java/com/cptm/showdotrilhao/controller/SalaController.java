@@ -2,8 +2,10 @@ package com.cptm.showdotrilhao.controller;
 
 import com.cptm.showdotrilhao.dto.request.CriarSalaRequest;
 import com.cptm.showdotrilhao.dto.request.EntrarSalaVisitanteRequest;
+import com.cptm.showdotrilhao.dto.request.PerguntaRequest;
 import com.cptm.showdotrilhao.dto.request.ResponderSimboloRequest;
 import com.cptm.showdotrilhao.dto.response.*;
+import com.cptm.showdotrilhao.exception.UnauthorizedException;
 import com.cptm.showdotrilhao.security.CustomUserDetails;
 import com.cptm.showdotrilhao.service.SalaService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,6 +30,17 @@ public class SalaController {
 
     public SalaController(SalaService salaService) {
         this.salaService = salaService;
+    }
+
+    private Long extrairUsuarioId(CustomUserDetails user) {
+        if (user != null && user.getId() != null) {
+            return user.getId();
+        }
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof CustomUserDetails cud && cud.getId() != null) {
+            return cud.getId();
+        }
+        throw new UnauthorizedException("Usuário não autenticado ou sessão expirada.");
     }
 
     @GetMapping("/public/verificar/{codigo}")
@@ -52,7 +66,8 @@ public class SalaController {
     public ResponseEntity<EntrarSalaResponse> entrarJogador(
             @PathVariable String codigo,
             @AuthenticationPrincipal CustomUserDetails user) {
-        EntrarSalaResponse response = salaService.entrarSalaJogador(codigo, user.getId());
+        Long usuarioId = extrairUsuarioId(user);
+        EntrarSalaResponse response = salaService.entrarSalaJogador(codigo, usuarioId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -63,7 +78,8 @@ public class SalaController {
     public ResponseEntity<SalaApresentadorEstadoResponse> iniciarJogo(
             @PathVariable String codigo,
             @AuthenticationPrincipal CustomUserDetails user) {
-        SalaApresentadorEstadoResponse response = salaService.iniciarJogo(codigo, user.getId());
+        Long usuarioId = extrairUsuarioId(user);
+        SalaApresentadorEstadoResponse response = salaService.iniciarJogo(codigo, usuarioId);
         return ResponseEntity.ok(response);
     }
 
@@ -74,7 +90,8 @@ public class SalaController {
     public ResponseEntity<SalaApresentadorEstadoResponse> obterEstadoApresentador(
             @PathVariable String codigo,
             @AuthenticationPrincipal CustomUserDetails user) {
-        SalaApresentadorEstadoResponse response = salaService.obterEstadoApresentador(codigo, user.getId());
+        Long usuarioId = extrairUsuarioId(user);
+        SalaApresentadorEstadoResponse response = salaService.obterEstadoApresentador(codigo, usuarioId);
         return ResponseEntity.ok(response);
     }
 
@@ -85,7 +102,8 @@ public class SalaController {
     public ResponseEntity<SalaApresentadorEstadoResponse> revelarResposta(
             @PathVariable String codigo,
             @AuthenticationPrincipal CustomUserDetails user) {
-        SalaApresentadorEstadoResponse response = salaService.revelarResposta(codigo, user.getId());
+        Long usuarioId = extrairUsuarioId(user);
+        SalaApresentadorEstadoResponse response = salaService.revelarResposta(codigo, usuarioId);
         return ResponseEntity.ok(response);
     }
 
@@ -96,7 +114,8 @@ public class SalaController {
     public ResponseEntity<SalaApresentadorEstadoResponse> proximaPergunta(
             @PathVariable String codigo,
             @AuthenticationPrincipal CustomUserDetails user) {
-        SalaApresentadorEstadoResponse response = salaService.proximaPergunta(codigo, user.getId());
+        Long usuarioId = extrairUsuarioId(user);
+        SalaApresentadorEstadoResponse response = salaService.proximaPergunta(codigo, usuarioId);
         return ResponseEntity.ok(response);
     }
 
@@ -134,7 +153,8 @@ public class SalaController {
     public ResponseEntity<SalaResponse> criarSala(
             @Valid @RequestBody CriarSalaRequest request,
             @AuthenticationPrincipal CustomUserDetails user) {
-        SalaResponse response = salaService.criarSala(request, user.getId());
+        Long usuarioId = extrairUsuarioId(user);
+        SalaResponse response = salaService.criarSala(request, usuarioId);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -144,8 +164,22 @@ public class SalaController {
     @Operation(summary = "Listar salas criadas pelo apresentador logado")
     public ResponseEntity<List<SalaResponse>> listarMinhasSalas(
             @AuthenticationPrincipal CustomUserDetails user) {
-        List<SalaResponse> salas = salaService.listarSalasApresentador(user.getId());
+        Long usuarioId = extrairUsuarioId(user);
+        List<SalaResponse> salas = salaService.listarSalasApresentador(usuarioId);
         return ResponseEntity.ok(salas);
+    }
+
+    @PostMapping("/{codigo}/perguntas/personalizada")
+    @PreAuthorize("hasAnyRole('APRESENTADOR', 'ADMIN')")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Vincular pergunta personalizada diretamente à sala")
+    public ResponseEntity<SalaResponse> adicionarPerguntaPersonalizada(
+            @PathVariable String codigo,
+            @Valid @RequestBody PerguntaRequest request,
+            @AuthenticationPrincipal CustomUserDetails user) {
+        Long usuarioId = extrairUsuarioId(user);
+        SalaResponse response = salaService.adicionarPerguntaPersonalizada(codigo, usuarioId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @PatchMapping("/apresentador/{id}/alternar-status")
@@ -155,7 +189,8 @@ public class SalaController {
     public ResponseEntity<SalaResponse> alternarStatus(
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails user) {
-        SalaResponse response = salaService.alternarStatusSala(id, user.getId());
+        Long usuarioId = extrairUsuarioId(user);
+        SalaResponse response = salaService.alternarStatusSala(id, usuarioId);
         return ResponseEntity.ok(response);
     }
 

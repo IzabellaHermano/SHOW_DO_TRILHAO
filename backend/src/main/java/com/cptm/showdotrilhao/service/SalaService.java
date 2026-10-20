@@ -1,6 +1,7 @@
 package com.cptm.showdotrilhao.service;
 
 import com.cptm.showdotrilhao.dto.request.CriarSalaRequest;
+import com.cptm.showdotrilhao.dto.request.PerguntaRequest;
 import com.cptm.showdotrilhao.dto.response.*;
 import com.cptm.showdotrilhao.exception.RegraNegocioException;
 import com.cptm.showdotrilhao.exception.ResourceNotFoundException;
@@ -58,11 +59,13 @@ public class SalaService {
         return toDto(sala);
     }
 
+    @Transactional(readOnly = true)
     public SalaResponse buscarPorCodigo(String codigo) {
         Sala sala = obterSalaAtiva(codigo);
         return toDto(sala);
     }
 
+    @Transactional(readOnly = true)
     public List<SalaResponse> listarSalasApresentador(Long apresentadorId) {
         Usuario apresentador = usuarioRepository.findById(apresentadorId)
                 .orElseThrow(() -> new ResourceNotFoundException("Apresentador não encontrado."));
@@ -73,8 +76,9 @@ public class SalaService {
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<SalaResponse> listarTodasSalas() {
-        return salaRepository.findAll()
+        return salaRepository.findAllWithApresentador()
                 .stream()
                 .map(this::toDto)
                 .collect(Collectors.toList());
@@ -197,15 +201,35 @@ public class SalaService {
             throw new RegraNegocioException("A partida desta sala já foi iniciada ou finalizada.");
         }
 
-        // Sorteia exatamente 10 perguntas distintas (níveis 1 a 10) sem repetições
-        List<Pergunta> perguntas = perguntaService.sortearPerguntasPartida();
-        if (perguntas.size() < 10) {
+        // Monta as 10 perguntas da partida preservando perguntas personalizadas vinculadas à sala
+        List<SalaPergunta> existentes = new ArrayList<>(sala.getPerguntas());
+        Set<Long> idsExistentes = existentes.stream().map(sp -> sp.getPergunta().getId()).collect(Collectors.toSet());
+
+        List<Pergunta> perguntasPartida;
+        if (existentes.size() >= 10) {
+            perguntasPartida = existentes.stream().map(SalaPergunta::getPergunta).limit(10).collect(Collectors.toList());
+        } else {
+            List<Pergunta> sorteadas = perguntaService.sortearPerguntasPartida();
+            perguntasPartida = new ArrayList<>();
+            for (SalaPergunta sp : existentes) {
+                perguntasPartida.add(sp.getPergunta());
+            }
+            for (Pergunta p : sorteadas) {
+                if (perguntasPartida.size() >= 10) break;
+                if (!idsExistentes.contains(p.getId())) {
+                    perguntasPartida.add(p);
+                    idsExistentes.add(p.getId());
+                }
+            }
+        }
+
+        if (perguntasPartida.size() < 10) {
             throw new RegraNegocioException("Não foi possível sortear as 10 perguntas da partida. Verifique o banco de perguntas.");
         }
 
         sala.getPerguntas().clear();
-        for (int i = 0; i < perguntas.size(); i++) {
-            sala.adicionarPergunta(perguntas.get(i), i + 1);
+        for (int i = 0; i < perguntasPartida.size(); i++) {
+            sala.adicionarPergunta(perguntasPartida.get(i), i + 1);
         }
 
         sala.setStatus(StatusSala.EM_ANDAMENTO);
@@ -612,12 +636,36 @@ public class SalaService {
         return new ArrayList<>(sala.getPerguntas());
     }
 
+    @Transactional
+    public SalaResponse adicionarPerguntaPersonalizada(String codigo, Long apresentadorId, PerguntaRequest request) {
+        Sala sala = obterSalaAtiva(codigo);
+        validarDonoSala(sala, apresentadorId);
+
+        if (sala.getStatus() != StatusSala.AGUARDANDO) {
+            throw new RegraNegocioException("Não é possível adicionar perguntas personalizadas em uma sala com jogo já iniciado ou finalizado.");
+        }
+
+        PerguntaAdminResponse adminResp = perguntaService.cadastrarPergunta(request);
+        Pergunta novaPergunta = perguntaService.buscarPorId(adminResp.id());
+
+        int proximaOrdem = sala.getPerguntas().size() + 1;
+        sala.adicionarPergunta(novaPergunta, proximaOrdem);
+        sala.incrementarVersao();
+        sala = salaRepository.save(sala);
+
+        return toDto(sala);
+    }
+
     public SalaResponse toDto(Sala sala) {
+        String apresentadorNome = (sala.getApresentador() != null && sala.getApresentador().getNome() != null)
+                ? sala.getApresentador().getNome()
+                : "CPTM";
+
         return new SalaResponse(
                 sala.getId(),
                 sala.getCodigo(),
                 sala.getNome(),
-                sala.getApresentador().getNome(),
+                apresentadorNome,
                 sala.isAtiva(),
                 sala.getStatus(),
                 sala.getFaseRodada(),

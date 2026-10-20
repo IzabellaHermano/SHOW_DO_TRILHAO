@@ -1,6 +1,7 @@
 package com.cptm.showdotrilhao.model;
 
 import com.cptm.showdotrilhao.model.enums.Role;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
@@ -18,6 +19,7 @@ public class Usuario {
     @Column(nullable = false, unique = true, length = 150)
     private String email;
 
+    @JsonIgnore
     @Column(nullable = false, length = 255)
     private String senha;
 

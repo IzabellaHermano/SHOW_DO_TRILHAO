@@ -2,6 +2,7 @@ package com.cptm.showdotrilhao.model;
 
 import com.cptm.showdotrilhao.model.enums.FaseRodada;
 import com.cptm.showdotrilhao.model.enums.StatusSala;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -21,6 +22,7 @@ public class Sala {
     @Column(nullable = false, length = 100)
     private String nome;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "apresentador_id", nullable = false)
     private Usuario apresentador;
@@ -48,6 +50,7 @@ public class Sala {
     @Column(name = "versao_estado", nullable = false)
     private long versaoEstado = 0;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "sala", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("ordem ASC")
     private List<SalaPergunta> perguntas = new ArrayList<>();
