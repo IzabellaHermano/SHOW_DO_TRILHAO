@@ -14,6 +14,7 @@
 **/dist/
 **/dist-ssr/
 *.local
+test_results/
 
 # IDE & OS
 .idea/
