@@ -9,6 +9,7 @@ import GameLogo from '../components/GameLogo'
 import MetroTimeline from '../components/MetroTimeline'
 import GameModal from '../components/GameModal'
 import CptmLogo from '../components/CptmLogo'
+import GameButton from '../components/GameButton'
 
 export default function Home() {
   const navigate = useNavigate()
@@ -139,26 +140,27 @@ export default function Home() {
         {/* Pilha de Botões de Ação Principal */}
         <div className="home-actions-group">
           {/* Botão 1 Primário: ENTRAR NO JOGO */}
-          <button
-            type="button"
+          <GameButton
             id="btn-entrar-no-jogo"
+            variant="primary"
+            size="xl"
+            icon={Play}
             onClick={handleAbrirEntrar}
-            className="btn-cptm btn-cptm-primary btn-xl btn-pulse"
+            className="btn-pulse"
           >
-            <Play size={24} fill="currentColor" />
-            <span>Entrar no Jogo</span>
-          </button>
+            Entrar no Jogo
+          </GameButton>
 
           {/* Botão 2 Secundário: CRIAR SALA */}
-          <button
-            type="button"
+          <GameButton
             id="btn-criar-sala"
+            variant="secondary"
+            size="lg"
+            icon={Users}
             onClick={handleCriarSala}
-            className="btn-cptm btn-cptm-secondary btn-lg"
           >
-            <Users size={20} />
-            <span>Criar Sala</span>
-          </button>
+            Criar Sala
+          </GameButton>
         </div>
 
         {/* Status discreto se o usuário já estiver logado */}
@@ -240,16 +242,19 @@ export default function Home() {
               />
             </div>
 
-            <button
+            <GameButton
               type="submit"
               id="btn-embarcar"
+              variant="primary"
+              size="lg"
+              block
               disabled={carregando}
-              className="btn-cptm btn-cptm-primary btn-xl btn-block"
+              loading={carregando}
+              icon={Train}
               style={{ marginTop: '0.75rem' }}
             >
-              <Train size={22} />
-              <span>{carregando ? 'Embarcando...' : 'Embarcar'}</span>
-            </button>
+              Embarcar
+            </GameButton>
           </form>
         </div>
       </GameModal>

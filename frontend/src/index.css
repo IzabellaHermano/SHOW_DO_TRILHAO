@@ -14,37 +14,62 @@
    ======================================================== */
 
 :root {
-  /* Cores Base */
-  --bg-main: #050B17;
-  --bg-panel: #09182D;
-  --bg-panel-elevated: #0E223D;
-  --bg-panel-subtle: rgba(9, 24, 45, 0.85);
-  --border-subtle: rgba(255, 255, 255, 0.08);
-  --border-active: rgba(237, 16, 43, 0.4);
-  --border-glow-gold: rgba(255, 198, 41, 0.45);
+  /* ========================================================
+     ESTÉTICA FIXA — SHOW DO TRILHÃO • CPTM
+     - Fundo: Degradê vibrante vermelho e azul/violeta
+     - Cartões: Caixas vermelhas escuras com borda branca fina arredondada
+     - Botões de Ação: Verde vibrante (alto contraste TV)
+     - Tipografia: Bold estilo letreiro de TV
+     - Alternativas: Círculo branco com número azul
+     ======================================================== */
 
-  /* Identidade CPTM */
+  /* Paleta de Fundo Vibrante (Vermelho / Magenta / Violeta / Azul) */
+  --bg-gradient-vibrant: linear-gradient(135deg, #7A0A2B 0%, #351357 50%, #16184E 100%);
+  --bg-gradient-radial: radial-gradient(circle at 50% 20%, rgba(220, 20, 60, 0.45) 0%, rgba(74, 21, 109, 0.25) 50%, rgba(22, 24, 78, 0.85) 100%);
+  --bg-main: #2b0b38;
+
+  /* Caixas Vermelhas Escuras com Borda Branca Fina Arredondada */
+  --card-bg: linear-gradient(180deg, rgba(82, 10, 26, 0.94) 0%, rgba(48, 5, 14, 0.98) 100%);
+  --card-border: 1.5px solid rgba(255, 255, 255, 0.45);
+  --card-radius: 16px;
+  --card-shadow: 0 12px 36px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.3);
+
+  /* Botões de Ação em Verde (Primário Oficial) */
+  --btn-green-bg: linear-gradient(180deg, #10B981 0%, #059669 100%);
+  --btn-green-border: 1.5px solid #34D399;
+  --btn-green-hover: linear-gradient(180deg, #34D399 0%, #10B981 100%);
+  --btn-green-shadow: 0 6px 18px rgba(16, 185, 129, 0.45);
+
+  /* Botão Secundário Translúcido */
+  --btn-sec-bg: rgba(255, 255, 255, 0.14);
+  --btn-sec-border: 1.5px solid rgba(255, 255, 255, 0.5);
+  --btn-sec-hover: rgba(255, 255, 255, 0.25);
+
+  /* Botão Perigo (Vermelho) */
+  --btn-danger-bg: linear-gradient(180deg, #EF4444 0%, #DC2626 100%);
+  --btn-danger-border: 1.5px solid #F87171;
+  --btn-danger-hover: linear-gradient(180deg, #F87171 0%, #EF4444 100%);
+
+  /* Botão Destaque Dourado */
+  --btn-gold-bg: linear-gradient(180deg, #FFD55C 0%, #FFC629 60%, #E6A700 100%);
+  --btn-gold-border: 1.5px solid #FFE082;
+  --btn-gold-text: #1B0005;
+
+  /* Alternativa (Círculo Branco com Número Azul) */
+  --alt-circle-bg: #FFFFFF;
+  --alt-circle-text: #003399;
+
+  /* Identidade CPTM & TV */
   --cptm-red: #ED102B;
   --cptm-red-hover: #FF1938;
-  --cptm-red-dark: #A3081B;
-  --cptm-red-glow: rgba(237, 16, 43, 0.5);
-
-  /* Dourado / Moeda / Pódio */
   --gold: #FFC629;
-  --gold-glow: rgba(255, 198, 41, 0.4);
-  --gold-dark: #C99600;
-
-  /* Alternativas Kahoot */
-  --alt-a: #ED102B;
-  --alt-b: #0879F9;
-  --alt-c: #00CC74;
-  --alt-d: #FFB900;
+  --gold-glow: rgba(255, 198, 41, 0.45);
 
   /* Textos */
   --text-white: #FFFFFF;
   --text-light: #F0F4FC;
-  --text-muted: #8E9DB2;
-  --text-dim: #5C6B80;
+  --text-muted: #CBD5E1;
+  --text-dim: #94A3B8;
 
   /* Tipografia */
   --font-display: 'Outfit', 'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -54,17 +79,12 @@
   --radius-xs: 6px;
   --radius-sm: 10px;
   --radius-md: 14px;
-  --radius-lg: 20px;
-  --radius-xl: 28px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
   --radius-pill: 9999px;
 
-  /* Sombras & Brilhos de Game Show */
-  --shadow-panel: 0 12px 36px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
-  --shadow-red-button: 0 8px 24px rgba(237, 16, 43, 0.45), 0 2px 4px rgba(0, 0, 0, 0.3);
-  --shadow-gold-button: 0 8px 24px rgba(255, 198, 41, 0.4), 0 2px 4px rgba(0, 0, 0, 0.3);
-
-  /* Transições Suaves */
-  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Transições */
+  --transition-fast: 0.18s cubic-bezier(0.4, 0, 0.2, 1);
   --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -89,12 +109,12 @@ html, body {
   overflow-x: hidden;
 }
 
-/* Fundo Cinematográfico Padrão com Overlay Noturno */
+/* Fundo Degradê Vibrante Noturno com Overlay de Palco de TV */
 body {
-  background-color: var(--bg-main);
+  background-color: #2b0b38;
   background-image:
-    linear-gradient(180deg, rgba(5, 11, 23, 0.84) 0%, rgba(5, 11, 23, 0.94) 100%),
-    url('/src/assets/station-bg.jpg');
+    var(--bg-gradient-radial),
+    var(--bg-gradient-vibrant);
   background-position: center center;
   background-size: cover;
   background-attachment: fixed;
@@ -107,6 +127,9 @@ body {
   display: flex;
   flex-direction: column;
   position: relative;
+  width: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
 }
 
 a {
@@ -129,7 +152,7 @@ input, select, textarea {
 }
 
 :focus-visible {
-  outline: 2px solid var(--cptm-red);
+  outline: 3px solid #34D399;
   outline-offset: 2px;
 }
 
@@ -284,9 +307,13 @@ input, select, textarea {
 }
 
 /* ========================================================
-   SISTEMA DE BOTÕES DO GAME SHOW
+   SISTEMA UNIFICADO DE BOTÕES DO GAME SHOW (ETAPA 2)
+   - Botões retos, centralizados, com mesma altura e largura coerente
+   - Ação principal em verde brilhante
+   - Hover, foco e desativação visíveis
+   - Área de toque mínima de 48px nos botões interativos
    ======================================================== */
-.btn-cptm {
+.game-btn, .btn-cptm {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -294,87 +321,401 @@ input, select, textarea {
   font-family: var(--font-display);
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  border-radius: var(--radius-pill);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast), background var(--transition-fast), opacity var(--transition-fast);
+  letter-spacing: 0.05em;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
   user-select: none;
   white-space: nowrap;
+  text-align: center;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  line-height: 1;
+  text-decoration: none;
 }
 
-.btn-cptm:active:not(:disabled) {
-  transform: scale(0.97);
+.game-btn:active:not(:disabled), .btn-cptm:active:not(:disabled) {
+  transform: translateY(1px);
 }
 
-.btn-cptm:disabled {
-  opacity: 0.5;
+.game-btn:disabled, .btn-cptm:disabled {
+  opacity: 0.45;
   cursor: not-allowed;
+  pointer-events: none;
+  box-shadow: none !important;
 }
 
-/* Botão Vermelho Primário (Ex: ENTRAR NO JOGO / EMBARCAR / TRAVAR) */
-.btn-cptm-primary {
-  background: linear-gradient(180deg, #FF1938 0%, #ED102B 100%);
+/* 1. Primário: Ação em VERDE (Entrar no Jogo / Confirmar / Salvar / Embarcar) */
+.game-btn-primary, .btn-cptm-primary {
+  background: var(--btn-green-bg);
+  border-color: #34D399;
   color: #FFFFFF;
-  box-shadow: var(--shadow-red-button);
+  box-shadow: var(--btn-green-shadow);
 }
 
-.btn-cptm-primary:hover:not(:disabled) {
-  background: linear-gradient(180deg, #FF3350 0%, #FF1938 100%);
-  box-shadow: 0 10px 30px rgba(237, 16, 43, 0.65);
+.game-btn-primary:hover:not(:disabled), .btn-cptm-primary:hover:not(:disabled) {
+  background: var(--btn-green-hover);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.65);
   transform: translateY(-2px);
 }
 
-/* Botão Secundário Navy (Ex: CRIAR SALA) */
-.btn-cptm-secondary {
-  background: rgba(9, 24, 45, 0.9);
-  color: #FFFFFF;
-  border: 1.5px solid rgba(255, 255, 255, 0.18);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+.game-btn-primary:focus-visible, .btn-cptm-primary:focus-visible {
+  outline: 3px solid #6EE7B7;
+  outline-offset: 2px;
 }
 
-.btn-cptm-secondary:hover:not(:disabled) {
-  background: rgba(14, 34, 61, 0.95);
-  border-color: rgba(255, 255, 255, 0.35);
+/* 2. Secundário: Translúcido com Borda Branca Fina */
+.game-btn-secondary, .btn-cptm-secondary {
+  background: var(--btn-sec-bg);
+  border-color: rgba(255, 255, 255, 0.45);
+  color: #FFFFFF;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+
+.game-btn-secondary:hover:not(:disabled), .btn-cptm-secondary:hover:not(:disabled) {
+  background: var(--btn-sec-hover);
+  border-color: #FFFFFF;
   transform: translateY(-2px);
 }
 
-/* Botão Dourado de Destaque (Ex: INICIAR O SHOW) */
-.btn-cptm-gold {
-  background: linear-gradient(180deg, #FFD55C 0%, #FFC629 60%, #E6A700 100%);
-  color: #050B17;
+/* 3. Perigo: Vermelho (Abandonar / Excluir / Fechar) */
+.game-btn-danger, .btn-cptm-danger {
+  background: var(--btn-danger-bg);
+  border-color: #F87171;
+  color: #FFFFFF;
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.45);
+}
+
+.game-btn-danger:hover:not(:disabled), .btn-cptm-danger:hover:not(:disabled) {
+  background: var(--btn-danger-hover);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.65);
+  transform: translateY(-2px);
+}
+
+/* 4. Discreto / Ghost (Subtle) */
+.game-btn-subtle, .btn-cptm-subtle {
+  background: transparent;
+  border-color: transparent;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.game-btn-subtle:hover:not(:disabled), .btn-cptm-subtle:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: #FFFFFF;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* 5. Dourado de TV (Iniciar Partida / 1 Milhão) */
+.game-btn-gold, .btn-cptm-gold {
+  background: var(--btn-gold-bg);
+  border-color: #FFE082;
+  color: var(--btn-gold-text);
   font-weight: 900;
-  box-shadow: var(--shadow-gold-button);
+  box-shadow: 0 4px 18px rgba(255, 198, 41, 0.5);
 }
 
-.btn-cptm-gold:hover:not(:disabled) {
+.game-btn-gold:hover:not(:disabled), .btn-cptm-gold:hover:not(:disabled) {
   background: linear-gradient(180deg, #FFE082 0%, #FFD55C 100%);
-  box-shadow: 0 10px 32px rgba(255, 198, 41, 0.65);
+  box-shadow: 0 8px 26px rgba(255, 198, 41, 0.7);
   transform: translateY(-2px);
 }
 
-/* Tamanhos de Botões */
-.btn-sm {
-  padding: 0.5rem 1.1rem;
+/* Tamanhos Padronizados (com toque mínimo acessível) */
+.game-btn-sm, .btn-sm {
+  min-height: 40px;
+  padding: 0 1rem;
   font-size: 0.85rem;
 }
 
-.btn-md {
-  padding: 0.75rem 1.6rem;
+.game-btn-md, .btn-md {
+  min-height: 48px;
+  padding: 0 1.5rem;
   font-size: 0.95rem;
 }
 
-.btn-lg {
-  padding: 0.95rem 2.2rem;
+.game-btn-lg, .btn-lg {
+  min-height: 52px;
+  padding: 0 2rem;
   font-size: 1.05rem;
 }
 
-.btn-xl {
-  padding: 1.15rem 2.8rem;
-  font-size: 1.2rem;
+.game-btn-xl, .btn-xl {
+  min-height: 58px;
+  padding: 0 2.5rem;
+  font-size: 1.15rem;
   letter-spacing: 0.06em;
 }
 
-.btn-block {
+.game-btn-block, .btn-block {
   width: 100%;
+}
+
+/* ========================================================
+   PADRÃO ÚNICO DE CARD (CAIXA VERMELHA ESCURA COM BORDA BRANCA FINA)
+   ======================================================== */
+.game-card {
+  background: var(--card-bg);
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  overflow: hidden;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.game-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.game-card-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: clamp(1.15rem, 2vw, 1.45rem);
+  color: #FFFFFF;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+.game-card-subtitle {
+  font-size: 0.88rem;
+  color: var(--text-muted);
+  margin: 0.25rem 0 0 0;
+}
+
+.game-card-body {
+  padding: 1.5rem;
+}
+
+.game-card-compact .game-card-body {
+  padding: 1rem;
+}
+
+/* ========================================================
+   PADRÃO ÚNICO DE ALTERNATIVA (CÍRCULO BRANCO COM NÚMERO AZUL)
+   ======================================================== */
+.game-alt-item {
+  display: flex;
+  align-items: center;
+  gap: 1.15rem;
+  background: var(--card-bg);
+  border: var(--card-border);
+  border-radius: var(--card-radius);
+  padding: 0.9rem 1.25rem;
+  color: #FFFFFF;
+  transition: all var(--transition-fast);
+  width: 100%;
+  text-align: left;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  position: relative;
+}
+
+/* Círculo Branco com Número Azul Oficial */
+.alt-circle-badge {
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  border-radius: 50%;
+  background: var(--alt-circle-bg);
+  color: var(--alt-circle-text);
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.35);
+  flex-shrink: 0;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+}
+
+.alt-circle-digit {
+  line-height: 1;
+}
+
+.alt-text-content {
+  font-family: var(--font-body);
+  font-weight: 700;
+  font-size: clamp(1rem, 1.8vw, 1.35rem);
+  flex: 1;
+  color: #FFFFFF;
+  line-height: 1.35;
+}
+
+.alt-selected-badge {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: #001E62;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.alt-votes-tag {
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-pill);
+  padding: 0.3rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--text-light);
+  flex-shrink: 0;
+}
+
+.alt-votes-tag.is-correct-tag {
+  background: rgba(16, 185, 129, 0.3);
+  border-color: #34D399;
+  color: #A7F3D0;
+}
+
+/* Estados da Alternativa */
+.game-alt-item.is-selected {
+  border-color: var(--gold);
+  background: linear-gradient(180deg, rgba(120, 20, 40, 0.98) 0%, rgba(70, 10, 24, 0.98) 100%);
+  box-shadow: 0 0 20px rgba(255, 198, 41, 0.45);
+}
+
+.game-alt-item.is-correct {
+  border-color: #34D399;
+  background: linear-gradient(180deg, rgba(6, 78, 42, 0.95) 0%, rgba(4, 47, 26, 0.98) 100%);
+  box-shadow: 0 0 24px rgba(16, 185, 129, 0.5);
+}
+
+.game-alt-item.is-wrong {
+  border-color: #F87171;
+  background: linear-gradient(180deg, rgba(127, 29, 29, 0.9) 0%, rgba(69, 10, 10, 0.95) 100%);
+}
+
+.game-alt-item.is-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Modo Controle Mobile (Tela do Jogador): toque >= 64px */
+.game-alt-item.is-mobile-controller {
+  min-height: 76px;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  border-radius: var(--radius-lg);
+}
+
+.game-alt-item.is-mobile-controller:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.8);
+  transform: translateY(-2px);
+}
+
+/* ========================================================
+   BARRA SUPERIOR (TOPBAR / NAVBAR UNIFICADA)
+   ======================================================== */
+.topbar-navbar {
+  position: sticky;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+  background: rgba(43, 11, 56, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1.5px solid rgba(255, 255, 255, 0.2);
+}
+
+.topbar-inner {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0.65rem 1.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.topbar-brand-group {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.topbar-brand-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.topbar-divider {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.topbar-presenter-badge {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--gold);
+  background: #110207;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 10px rgba(255, 198, 41, 0.4);
+  flex-shrink: 0;
+}
+
+.topbar-presenter-avatar {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.topbar-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.topbar-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--font-display);
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  padding: 0.45rem 0.85rem;
+  border-radius: var(--radius-sm);
+  transition: all var(--transition-fast);
+  text-transform: uppercase;
+}
+
+.topbar-nav-link:hover, .topbar-nav-link.is-active {
+  color: #FFFFFF;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.topbar-user-group {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.25rem 0.65rem 0.25rem 0.85rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.topbar-user-name {
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: #FFFFFF;
 }
 
 /* Pulsação Suave de Destaque */

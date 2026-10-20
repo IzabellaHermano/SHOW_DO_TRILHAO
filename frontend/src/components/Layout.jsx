@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
-import Navbar from './Navbar'
+import TopBar from './TopBar'
 import ColdStartBanner from './ColdStartBanner'
 import { useToast } from '../context/ToastContext'
 
@@ -29,7 +29,7 @@ export default function Layout() {
 
   return (
     <div className={`app-root-shell ${isGameRoute ? 'shell-game-mode' : ''}`}>
-      {!isGameRoute && <Navbar />}
+      {!isGameRoute && <TopBar />}
       <ColdStartBanner />
       <main className={`main-stage ${isGameRoute ? 'main-game-fullscreen' : ''}`}>
         <Outlet />

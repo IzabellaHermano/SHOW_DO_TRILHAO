@@ -22,6 +22,9 @@ import {
 import CptmLogo from '../components/CptmLogo'
 import GameLogo from '../components/GameLogo'
 import Podium from '../components/Podium'
+import GameButton from '../components/GameButton'
+import GameCard from '../components/GameCard'
+import AlternativaItem from '../components/AlternativaItem'
 
 export default function Jogo() {
   const { codigo: paramCodigo } = useParams()
@@ -169,18 +172,19 @@ export default function Jogo() {
   if (erroSessao) {
     return (
       <div className="player-mobile-stage">
-        <div className="player-session-error-card">
-          <AlertTriangle size={42} style={{ color: 'var(--cptm-gold)', marginBottom: '0.75rem' }} />
+        <GameCard className="player-session-error-card" style={{ textAlign: 'center', width: '100%', maxWidth: '420px', margin: 'auto' }}>
+          <AlertTriangle size={42} style={{ color: 'var(--cptm-gold)', margin: '0 auto 0.75rem auto' }} />
           <h2 style={{ color: '#FFFFFF', fontWeight: 900 }}>Embarque Necessário</h2>
           <p style={{ color: 'var(--text-muted)', margin: '0.5rem 0 1.25rem 0' }}>{erroSessao}</p>
-          <button
-            type="button"
+          <GameButton
             onClick={() => navigate(`/sala/${codigoSala}`)}
-            className="btn-cptm btn-cptm-primary btn-lg"
+            variant="primary"
+            size="lg"
+            block
           >
-            <span>Fazer Embarque na Sala</span>
-          </button>
-        </div>
+            Fazer Embarque na Sala
+          </GameButton>
+        </GameCard>
       </div>
     )
   }
@@ -227,7 +231,7 @@ export default function Jogo() {
           </div>
         )}
 
-        <div className="player-waiting-box">
+        <GameCard className="player-waiting-box" style={{ textAlign: 'center', width: '100%', maxWidth: '420px', margin: 'auto' }}>
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
             <CptmLogo size="sm" />
             <div style={{ width: 1, height: 22, background: 'rgba(255,255,255,0.2)' }} />
@@ -252,7 +256,7 @@ export default function Jogo() {
           <div className="player-waiting-hint">
             <span>Quando o show começar, os 4 símbolos de resposta aparecerão aqui no seu celular.</span>
           </div>
-        </div>
+        </GameCard>
       </div>
     )
   }
@@ -269,7 +273,7 @@ export default function Jogo() {
           <span className="player-room-tag">SALA {codigoSala}</span>
         </header>
 
-        <div className="player-final-card">
+        <GameCard className="player-final-card" style={{ textAlign: 'center', width: '100%', maxWidth: '440px', margin: 'auto' }}>
           <Trophy size={48} style={{ color: 'var(--cptm-gold)', margin: '0 auto 0.75rem auto' }} />
           <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, color: '#FFFFFF', fontSize: '1.6rem' }}>
             {premioAcumulado >= 1000000 ? 'PARABÉNS! 1 MILHÃO!' : 'Fim de Jogo!'}
@@ -284,24 +288,26 @@ export default function Jogo() {
           </p>
 
           <div style={{ marginTop: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            <button
-              type="button"
+            <GameButton
               onClick={() => navigate('/')}
-              className="btn-cptm btn-cptm-primary btn-lg"
+              variant="primary"
+              size="lg"
+              block
+              icon={RotateCcw}
             >
-              <RotateCcw size={16} />
-              <span>Jogar Novamente</span>
-            </button>
-            <button
-              type="button"
+              Jogar Novamente
+            </GameButton>
+            <GameButton
               onClick={() => navigate('/ranking')}
-              className="btn-cptm btn-cptm-secondary btn-lg"
+              variant="secondary"
+              size="lg"
+              block
+              icon={Trophy}
             >
-              <Trophy size={16} />
-              <span>Ver Ranking Geral</span>
-            </button>
+              Ver Ranking Geral
+            </GameButton>
           </div>
-        </div>
+        </GameCard>
       </div>
     )
   }
@@ -375,7 +381,7 @@ export default function Jogo() {
         )}
       </div>
 
-      {/* OS 4 GRANDES BOTÕES DE SÍMBOLOS (CÍRCULO BRANCO COM NÚMERO AZUL ESTILO CPTM) */}
+      {/* OS 4 GRANDES BOTÕES DE SÍMBOLOS (CÍRCULO BRANCO COM NÚMERO AZUL ESTILO CPTM >= 64PX) */}
       <main className="player-symbols-pad" role="region" aria-label="Teclado de Respostas">
         {[1, 2, 3, 4].map((num) => {
           const isSelecionado = alternativaEscolhidaNumero === num
@@ -387,24 +393,17 @@ export default function Jogo() {
             enviandoResposta
 
           return (
-            <button
+            <AlternativaItem
               key={num}
-              type="button"
+              numero={num}
               id={`btn-simbolo-${num}`}
-              disabled={isDesabilitado}
+              isMobileController={true}
+              desabilitado={isDesabilitado}
+              selecionado={isSelecionado}
+              correto={faseRodada === 'REVELACAO' && num === alternativaCorretaNumero}
+              revelado={faseRodada === 'REVELACAO'}
               onClick={() => handleSelecionarSimbolo(num)}
-              className={`player-symbol-btn ${isSelecionado ? 'is-selected' : ''} ${faseRodada === 'REVELACAO' && num === alternativaCorretaNumero ? 'is-correct-symbol' : ''}`}
-              aria-label={`Responder Símbolo ${num}`}
-            >
-              <div className="player-symbol-inner-circle">
-                <span className="player-symbol-digit">{num}</span>
-              </div>
-              {isSelecionado && (
-                <span className="player-symbol-check-badge">
-                  <Check size={18} strokeWidth={3} />
-                </span>
-              )}
-            </button>
+            />
           )
         })}
       </main>

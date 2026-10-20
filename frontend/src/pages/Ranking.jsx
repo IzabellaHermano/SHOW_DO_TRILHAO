@@ -5,6 +5,8 @@ import { Trophy, Award, Search, Users, RefreshCw, CheckCircle, UserCheck, UserX 
 import CptmLogo from '../components/CptmLogo'
 import GameLogo from '../components/GameLogo'
 import Podium from '../components/Podium'
+import GameButton from '../components/GameButton'
+import GameCard from '../components/GameCard'
 
 export default function Ranking() {
   const toast = useToast()
@@ -79,28 +81,24 @@ export default function Ranking() {
         </p>
 
         {/* Abas */}
-        <div className="ranking-top-tabs" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={aba === 'geral'}
-            className={`btn-cptm ${aba === 'geral' ? 'btn-cptm-primary' : 'btn-cptm-secondary'} btn-md`}
+        <div className="ranking-top-tabs" role="tablist" style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <GameButton
+            variant={aba === 'geral' ? 'primary' : 'secondary'}
+            size="md"
+            icon={Award}
             onClick={() => setAba('geral')}
           >
-            <Award size={18} />
-            <span>Ranking Geral (Oficial)</span>
-          </button>
+            Ranking Geral (Oficial)
+          </GameButton>
 
-          <button
-            type="button"
-            role="tab"
-            aria-selected={aba === 'sala'}
-            className={`btn-cptm ${aba === 'sala' ? 'btn-cptm-primary' : 'btn-cptm-secondary'} btn-md`}
+          <GameButton
+            variant={aba === 'sala' ? 'primary' : 'secondary'}
+            size="md"
+            icon={Users}
             onClick={() => setAba('sala')}
           >
-            <Users size={18} />
-            <span>Ranking por Sala</span>
-          </button>
+            Ranking por Sala
+          </GameButton>
         </div>
 
         {/* Busca por Sala */}
@@ -120,38 +118,37 @@ export default function Ranking() {
               onChange={(e) => setCodigoSala(e.target.value.toUpperCase())}
               className="game-input game-input-uppercase"
             />
-            <button type="submit" className="btn-cptm btn-cptm-primary btn-md">
-              <Search size={16} />
-              <span>Buscar</span>
-            </button>
+            <GameButton type="submit" variant="primary" size="md" icon={Search}>
+              Buscar
+            </GameButton>
           </form>
         )}
       </header>
 
       {/* PÓDIO 3D DOS 3 PRIMEIROS */}
       {ranking.length >= 1 && (
-        <div style={{ marginBottom: '2.5rem' }}>
+        <div style={{ marginBottom: '2.5rem', width: '100%', maxWidth: '100%' }}>
           <Podium players={ranking.slice(0, 3)} formatScore={formatarMoeda} />
         </div>
       )}
 
       {/* TABELA DE CLASSIFICAÇÃO */}
-      <div className="ranking-table-panel">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-          <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.25rem' }}>
+      <GameCard className="ranking-table-panel">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', gap: '0.5rem', flexWrap: 'wrap' }}>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.25rem', margin: 0 }}>
             {aba === 'geral'
               ? 'Classificação Geral de Milionários'
               : `Resultados da Sala: ${codigoSala || ''}`}
           </h2>
-          <button
-            type="button"
+          <GameButton
+            variant="secondary"
+            size="sm"
+            icon={RefreshCw}
             onClick={carregarRanking}
-            className="btn-cptm btn-cptm-secondary btn-sm"
             title="Atualizar ranking"
           >
-            <RefreshCw size={14} className={carregando ? 'spin' : ''} />
-            <span>Atualizar</span>
-          </button>
+            Atualizar
+          </GameButton>
         </div>
 
         {erro && (
@@ -223,7 +220,7 @@ export default function Ranking() {
             </table>
           </div>
         )}
-      </div>
+      </GameCard>
     </div>
   )
 }

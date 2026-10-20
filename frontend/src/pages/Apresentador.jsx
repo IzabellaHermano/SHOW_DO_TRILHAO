@@ -33,6 +33,9 @@ import GameTitle from '../components/GameTitle'
 import PlayerPill from '../components/PlayerPill'
 import GameModal from '../components/GameModal'
 import Podium from '../components/Podium'
+import GameButton from '../components/GameButton'
+import GameCard from '../components/GameCard'
+import AlternativaItem from '../components/AlternativaItem'
 
 const VALORES_SUGERIDOS_POR_NIVEL = {
   1: 1000,
@@ -271,19 +274,19 @@ export default function Apresentador() {
         {/* HEADER DO TELÃO */}
         <header className="presenter-telao-header">
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <button
-              type="button"
+            <GameButton
+              variant="secondary"
+              size="sm"
+              icon={ArrowLeft}
               onClick={() => {
                 setSalaTelaoAtiva(null)
                 setEstadoTelao(null)
                 carregarSalas()
               }}
-              className="btn-cptm btn-cptm-secondary btn-sm"
               title="Voltar ao Painel de Controle"
             >
-              <ArrowLeft size={16} />
-              <span>Painel</span>
-            </button>
+              Painel
+            </GameButton>
             <CptmLogo size="md" />
           </div>
 
@@ -324,22 +327,22 @@ export default function Apresentador() {
                     <strong style={{ wordBreak: 'break-all' }}>{gameUrl}</strong>
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.65rem' }}>
-                    <button
-                      type="button"
+                    <GameButton
+                      variant="secondary"
+                      size="sm"
+                      icon={Copy}
                       onClick={() => copiarLink(gameUrl)}
-                      className="btn-cptm btn-cptm-secondary btn-sm"
                     >
-                      <Copy size={14} />
-                      <span>Copiar Link</span>
-                    </button>
-                    <button
-                      type="button"
+                      Copiar Link
+                    </GameButton>
+                    <GameButton
+                      variant="secondary"
+                      size="sm"
+                      icon={Copy}
                       onClick={() => copiarCodigo(salaTelaoAtiva.codigo)}
-                      className="btn-cptm btn-cptm-secondary btn-sm"
                     >
-                      <Copy size={14} />
-                      <span>Copiar Código</span>
-                    </button>
+                      Copiar Código
+                    </GameButton>
                   </div>
                 </div>
 
@@ -378,16 +381,18 @@ export default function Apresentador() {
 
             {/* Ação de Início do Apresentador */}
             <div className="lobby-bottom-bar">
-              <button
-                type="button"
+              <GameButton
                 id="btn-iniciar-jogo"
+                variant="gold"
+                size="xl"
+                icon={Play}
                 disabled={executandoAcao}
+                loading={executandoAcao}
                 onClick={handleIniciarJogo}
-                className="btn-cptm btn-cptm-gold btn-xl btn-pulse"
+                className="btn-pulse"
               >
-                <Play size={26} fill="currentColor" />
-                <span>{executandoAcao ? 'Montando Partida...' : 'Iniciar Jogo'}</span>
-              </button>
+                Iniciar Jogo
+              </GameButton>
             </div>
           </div>
         )}
@@ -436,59 +441,57 @@ export default function Apresentador() {
                   : 0
 
                 return (
-                  <div
+                  <AlternativaItem
                     key={alt.numero}
-                    className={`presenter-option-card ${isCorreta ? 'is-correct-reveal' : ''}`}
-                  >
-                    <div className="presenter-symbol-circle">
-                      <span>{alt.numero}</span>
-                    </div>
-                    <div className="presenter-option-text">{alt.texto}</div>
-                    {faseRodada === 'REVELACAO' && (
-                      <div className="presenter-votes-tag">
-                        <span>{votos} votos ({percent}%)</span>
-                      </div>
-                    )}
-                  </div>
+                    numero={alt.numero}
+                    texto={alt.texto}
+                    correto={isCorreta}
+                    revelado={faseRodada === 'REVELACAO'}
+                    votos={votos}
+                    percentual={percent}
+                  />
                 )
               })}
             </div>
 
             {/* EXPLICAÇÃO PEDAGÓGICA DA CPTM (EXIBIDA APENAS NA REVELAÇÃO) */}
             {faseRodada === 'REVELACAO' && estadoTelao.explicacao && (
-              <div className="presenter-explanation-box">
+              <GameCard className="presenter-explanation-box">
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--cptm-gold)', fontWeight: 800 }}>
                   <Sparkles size={20} />
                   <span>Você sabia? • História da CPTM</span>
                 </div>
                 <p className="presenter-explanation-text">{estadoTelao.explicacao}</p>
-              </div>
+              </GameCard>
             )}
 
             {/* BARRA INFERIOR DE CONTROLE DE RITMO DO APRESENTADOR */}
             <div className="presenter-controls-bar">
               {faseRodada === 'PERGUNTA' ? (
-                <button
-                  type="button"
+                <GameButton
                   id="btn-revelar-resposta"
+                  variant="primary"
+                  size="lg"
+                  icon={Eye}
                   disabled={executandoAcao}
+                  loading={executandoAcao}
                   onClick={handleRevelarResposta}
-                  className="btn-cptm btn-cptm-primary btn-lg"
                 >
-                  <Eye size={20} />
-                  <span>Revelar Resposta</span>
-                </button>
+                  Revelar Resposta
+                </GameButton>
               ) : (
-                <button
-                  type="button"
+                <GameButton
                   id="btn-proxima-pergunta"
+                  variant="gold"
+                  size="lg"
+                  iconRight={ChevronRight}
                   disabled={executandoAcao}
+                  loading={executandoAcao}
                   onClick={handleProximaPergunta}
-                  className="btn-cptm btn-cptm-gold btn-lg btn-pulse"
+                  className="btn-pulse"
                 >
-                  <span>{estadoTelao.nivelAtual >= 10 ? 'Ver Pódio Final' : 'Próxima Pergunta'}</span>
-                  <ChevronRight size={20} />
-                </button>
+                  {estadoTelao.nivelAtual >= 10 ? 'Ver Pódio Final' : 'Próxima Pergunta'}
+                </GameButton>
               )}
             </div>
           </div>
@@ -510,18 +513,18 @@ export default function Apresentador() {
             <Podium players={rankingFinalSala} formatScore={formatarMoeda} />
 
             <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginTop: '2rem' }}>
-              <button
-                type="button"
+              <GameButton
+                variant="secondary"
+                size="lg"
+                icon={ArrowLeft}
                 onClick={() => {
                   setSalaTelaoAtiva(null)
                   setEstadoTelao(null)
                   carregarSalas()
                 }}
-                className="btn-cptm btn-cptm-secondary btn-lg"
               >
-                <ArrowLeft size={18} />
-                <span>Voltar ao Painel</span>
-              </button>
+                Voltar ao Painel
+              </GameButton>
             </div>
           </div>
         )}
@@ -583,54 +586,50 @@ export default function Apresentador() {
         </p>
 
         {/* Abas */}
-        <div className="presenter-tabs-row" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={abaAtiva === 'salas'}
+        <div className="presenter-tabs-row" role="tablist" style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+          <GameButton
+            variant={abaAtiva === 'salas' ? 'primary' : 'secondary'}
+            size="md"
+            icon={LayoutDashboard}
             onClick={() => setAbaAtiva('salas')}
-            className={`btn-cptm ${abaAtiva === 'salas' ? 'btn-cptm-primary' : 'btn-cptm-secondary'}`}
           >
-            <LayoutDashboard size={18} />
-            <span>Salas de Jogo</span>
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={abaAtiva === 'perguntas'}
+            Salas de Jogo
+          </GameButton>
+          <GameButton
+            variant={abaAtiva === 'perguntas' ? 'primary' : 'secondary'}
+            size="md"
+            icon={HelpCircle}
             onClick={() => setAbaAtiva('perguntas')}
-            className={`btn-cptm ${abaAtiva === 'perguntas' ? 'btn-cptm-primary' : 'btn-cptm-secondary'}`}
           >
-            <HelpCircle size={18} />
-            <span>Banco de Perguntas</span>
-          </button>
+            Banco de Perguntas
+          </GameButton>
         </div>
       </header>
 
       {/* ABA DE SALAS */}
       {abaAtiva === 'salas' && (
         <section className="presenter-section">
-          <div className="section-actions-bar">
-            <h2 className="section-title">Minhas Salas de Jogo</h2>
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button
-                type="button"
+          <div className="section-actions-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <h2 className="section-title" style={{ margin: 0 }}>Minhas Salas de Jogo</h2>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <GameButton
+                variant="secondary"
+                size="sm"
+                icon={RefreshCw}
                 onClick={carregarSalas}
-                className="btn-cptm btn-cptm-secondary btn-sm"
                 title="Atualizar lista de salas"
               >
-                <RefreshCw size={16} className={carregandoSalas ? 'spin' : ''} />
-                <span>Atualizar</span>
-              </button>
-              <button
-                type="button"
+                Atualizar
+              </GameButton>
+              <GameButton
                 id="btn-abrir-modal-nova-sala"
+                variant="primary"
+                size="sm"
+                icon={PlusCircle}
                 onClick={() => setModalNovaSalaAberto(true)}
-                className="btn-cptm btn-cptm-primary btn-sm"
               >
-                <PlusCircle size={16} />
-                <span>Criar Nova Sala</span>
-              </button>
+                Criar Nova Sala
+              </GameButton>
             </div>
           </div>
 
@@ -640,15 +639,15 @@ export default function Apresentador() {
               <p>Carregando salas do servidor...</p>
             </div>
           ) : salas.length === 0 ? (
-            <div className="empty-state-box">
-              <Tv size={42} style={{ color: 'var(--cptm-gold)', opacity: 0.8, marginBottom: '0.5rem' }} />
-              <h3>Nenhuma sala criada</h3>
-              <p>Clique no botão acima para criar uma nova sala e abrir o telão oficial do jogo.</p>
-            </div>
+            <GameCard className="empty-state-box" style={{ textAlign: 'center', padding: '3rem 1.5rem' }}>
+              <Tv size={42} style={{ color: 'var(--cptm-gold)', opacity: 0.85, margin: '0 auto 0.75rem auto' }} />
+              <h3 style={{ color: '#FFFFFF', fontWeight: 800 }}>Nenhuma sala criada</h3>
+              <p style={{ color: 'var(--text-muted)' }}>Clique no botão acima para criar uma nova sala e abrir o telão oficial do jogo.</p>
+            </GameCard>
           ) : (
             <div className="rooms-grid">
               {salas.map((sala) => (
-                <div key={sala.id} className={`room-card ${!sala.ativa ? 'is-inactive' : ''}`}>
+                <GameCard key={sala.id} className={`room-card ${!sala.ativa ? 'is-inactive' : ''}`}>
                   <div className="room-card-header">
                     <div>
                       <span className="room-code-tag">{sala.codigo}</span>
@@ -663,36 +662,35 @@ export default function Apresentador() {
                     <span>Criada em: {new Date(sala.criadaEm).toLocaleDateString('pt-BR')}</span>
                   </div>
 
-                  <div className="room-card-actions">
-                    <button
-                      type="button"
+                  <div className="room-card-actions" style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' }}>
+                    <GameButton
                       id={`btn-abrir-telao-${sala.codigo}`}
+                      variant="gold"
+                      size="sm"
+                      icon={Tv}
                       onClick={() => abrirLobbyTelao(sala)}
-                      className="btn-cptm btn-cptm-gold btn-sm"
                       title="Abrir Telão da Sala"
                     >
-                      <Tv size={15} />
-                      <span>Abrir Telão</span>
-                    </button>
-                    <button
-                      type="button"
+                      Abrir Telão
+                    </GameButton>
+                    <GameButton
+                      variant="secondary"
+                      size="sm"
+                      icon={Copy}
                       onClick={() => copiarCodigo(sala.codigo)}
-                      className="btn-cptm btn-cptm-secondary btn-sm"
                       title="Copiar Código"
                     >
-                      <Copy size={15} />
-                      <span>Copiar</span>
-                    </button>
-                    <button
-                      type="button"
+                      Copiar
+                    </GameButton>
+                    <GameButton
+                      variant="subtle"
+                      size="sm"
+                      icon={Power}
                       onClick={() => handleAlternarStatusSala(sala.id)}
-                      className="btn-cptm btn-cptm-outline btn-sm"
                       title={sala.ativa ? 'Desativar Sala' : 'Ativar Sala'}
-                    >
-                      <Power size={15} />
-                    </button>
+                    />
                   </div>
-                </div>
+                </GameCard>
               ))}
             </div>
           )}
@@ -709,14 +707,14 @@ export default function Apresentador() {
                 Total de {perguntas.length} perguntas cadastradas de níveis 1 a 10.
               </p>
             </div>
-            <button
-              type="button"
+            <GameButton
+              variant="secondary"
+              size="sm"
               onClick={carregarPerguntas}
-              className="btn-cptm btn-cptm-secondary btn-sm"
+              icon={<RefreshCw size={16} className={carregandoPerguntas ? 'spin' : ''} />}
             >
-              <RefreshCw size={16} className={carregandoPerguntas ? 'spin' : ''} />
-              <span>Atualizar</span>
-            </button>
+              Atualizar
+            </GameButton>
           </div>
 
           <div className="questions-filter-strip">
@@ -790,22 +788,22 @@ export default function Apresentador() {
             </span>
           </div>
 
-          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.25rem' }}>
-            <button
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem', marginTop: '1.25rem', flexWrap: 'wrap' }}>
+            <GameButton
               type="button"
+              variant="secondary"
               onClick={() => setModalNovaSalaAberto(false)}
-              className="btn-cptm btn-cptm-secondary"
             >
               Cancelar
-            </button>
-            <button
+            </GameButton>
+            <GameButton
               type="submit"
+              variant="primary"
               disabled={criandoSala || !nomeNovaSala.trim()}
-              className="btn-cptm btn-cptm-primary"
+              icon={<Save size={16} />}
             >
-              <Save size={16} />
-              <span>{criandoSala ? 'Criando...' : 'Confirmar e Abrir Telão'}</span>
-            </button>
+              {criandoSala ? 'Criando...' : 'Confirmar e Abrir Telão'}
+            </GameButton>
           </div>
         </form>
       </GameModal>

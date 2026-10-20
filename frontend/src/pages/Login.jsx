@@ -7,6 +7,8 @@ import { LogIn, UserPlus, ShieldAlert, Sparkles, CheckCircle2 } from 'lucide-rea
 import CptmLogo from '../components/CptmLogo'
 import GameLogo from '../components/GameLogo'
 import GameTitle from '../components/GameTitle'
+import GameButton from '../components/GameButton'
+import GameCard from '../components/GameCard'
 
 export default function Login() {
   const navigate = useNavigate()
@@ -78,14 +80,14 @@ export default function Login() {
   }
 
   return (
-    <div className="home-hero-stage" style={{ minHeight: 'calc(100vh - 65px)', justifyContent: 'center' }}>
-      <div className="game-modal-container modal-md" style={{ margin: 'auto 0' }}>
-        <div style={{ textAlign: 'center', padding: '2rem 2rem 1rem 2rem' }}>
+    <div className="home-hero-stage" style={{ minHeight: 'calc(100dvh - 65px)', justifyContent: 'center', padding: '1rem' }}>
+      <GameCard className="modal-md" style={{ width: '100%', maxWidth: '480px', margin: 'auto 0' }}>
+        <div style={{ textAlign: 'center', padding: '1.75rem 1.75rem 0.75rem 1.75rem' }}>
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
             <CptmLogo size="md" />
             <GameLogo size="sm" />
           </div>
-          <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: '1.75rem', marginTop: '0.5rem' }}>
+          <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 900, fontSize: 'clamp(1.3rem, 3.5vw, 1.75rem)', marginTop: '0.5rem' }}>
             {isRegister ? 'Cadastre-se nos Trilhos' : 'Acesse sua Conta CPTM'}
           </h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.88rem', marginTop: '0.25rem' }}>
@@ -96,28 +98,30 @@ export default function Login() {
 
           {/* Alternador de Abas */}
           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem' }}>
-            <button
-              type="button"
-              className={`btn-cptm ${!isRegister ? 'btn-cptm-primary' : 'btn-cptm-secondary'} btn-sm btn-block`}
+            <GameButton
+              variant={!isRegister ? 'primary' : 'secondary'}
+              size="sm"
+              block
+              icon={LogIn}
               onClick={() => {
                 setIsRegister(false)
                 setErro('')
               }}
             >
-              <LogIn size={15} />
-              <span>Login</span>
-            </button>
-            <button
-              type="button"
-              className={`btn-cptm ${isRegister ? 'btn-cptm-primary' : 'btn-cptm-secondary'} btn-sm btn-block`}
+              Login
+            </GameButton>
+            <GameButton
+              variant={isRegister ? 'primary' : 'secondary'}
+              size="sm"
+              block
+              icon={UserPlus}
               onClick={() => {
                 setIsRegister(true)
                 setErro('')
               }}
             >
-              <UserPlus size={15} />
-              <span>Cadastrar</span>
-            </button>
+              Cadastrar
+            </GameButton>
           </div>
         </div>
 
@@ -186,53 +190,46 @@ export default function Login() {
               </div>
             )}
 
-            <button
+            <GameButton
               type="submit"
               disabled={carregando}
-              className="btn-cptm btn-cptm-primary btn-lg btn-block btn-pulse"
+              loading={carregando}
+              variant="primary"
+              size="lg"
+              block
+              icon={isRegister ? UserPlus : LogIn}
+              className="btn-pulse"
               style={{ marginTop: '0.75rem' }}
             >
-              {carregando ? (
-                'Autenticando...'
-              ) : isRegister ? (
-                <>
-                  <UserPlus size={18} />
-                  <span>Confirmar Cadastro</span>
-                </>
-              ) : (
-                <>
-                  <LogIn size={18} />
-                  <span>Entrar no Show</span>
-                </>
-              )}
-            </button>
+              {isRegister ? 'Confirmar Cadastro' : 'Entrar no Show'}
+            </GameButton>
           </form>
 
           {/* Atalho Demo para Avaliação */}
-          <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255, 255, 255, 0.08)', textAlign: 'center' }}>
+          <div style={{ marginTop: '1.5rem', paddingTop: '1.25rem', borderTop: '1px solid rgba(255, 255, 255, 0.12)', textAlign: 'center' }}>
             <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>
               Atalhos Rápidos de Demonstração:
             </span>
-            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '0.5rem' }}>
-              <button
-                type="button"
+            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+              <GameButton
+                variant="secondary"
+                size="sm"
+                icon={Sparkles}
                 onClick={() => handleEntrarComoDemo('ROLE_APRESENTADOR')}
-                className="btn-cptm btn-cptm-secondary btn-sm"
               >
-                <Sparkles size={13} className="gold-icon" />
-                <span>Apresentador</span>
-              </button>
-              <button
-                type="button"
+                Apresentador
+              </GameButton>
+              <GameButton
+                variant="secondary"
+                size="sm"
                 onClick={() => handleEntrarComoDemo('ROLE_ADMIN')}
-                className="btn-cptm btn-cptm-secondary btn-sm"
               >
-                <span>Administrador</span>
-              </button>
+                Administrador
+              </GameButton>
             </div>
           </div>
         </div>
-      </div>
+      </GameCard>
     </div>
   )
 }
